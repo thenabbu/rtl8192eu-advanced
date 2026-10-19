@@ -1,0 +1,16 @@
+--- a/core/rtw_mlme_ext.c
++++ b/core/rtw_mlme_ext.c
+@@ -11918,7 +11918,12 @@
+ 		self_action = MLME_STA_DISCONNECTED;
+ 	else if (MLME_IS_ADHOC(padapter) || MLME_IS_ADHOC_MASTER(padapter))
+ 		self_action = MLME_ADHOC_STOPPED;
+-	else {
++	else if (MLME_IS_MONITOR(padapter)) {
++		/* monitor iftype has no MLME link: disconnect is a no-op.
++		 * Realtek's chain forgot this state -> rtw_warn_on(1) on every
++		 * monitor->AP transition. Keep the rest of the function running
++		 * exactly as the warn path did, minus the warning. */
++	} else {
+ 		RTW_INFO("state:0x%x\n", MLME_STATE(padapter));
+ 		rtw_warn_on(1);
+ 	}
