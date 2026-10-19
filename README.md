@@ -54,8 +54,10 @@ DKMS: copy the patched tree to `/usr/src/rtl8192eu-1.0`, then
 
 Running as the house AP driver on the lab host since 2026-10-19: hostapd
 (AP mode), monitor mode, client re-association ~9 s after module bounce,
-zero kernel warnings. Roadmap: TX-power/RF control surface, LED control,
-Windows `rtwlanu.sys` comparison (Ghidra), TX injection.
+zero kernel warnings. LED control shipped (`tools/rtlled.sh` + `docs/led-control.md` — register
+driver via procfs, wire-verified). Roadmap: TX-power/RF control surface,
+`led_config` strategy build flag, Windows `rtwlanu.sys` comparison
+(Ghidra), TX injection.
 
 ## Provenance & license
 
