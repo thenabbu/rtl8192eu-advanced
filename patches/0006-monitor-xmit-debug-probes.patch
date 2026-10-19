@@ -1,0 +1,43 @@
+--- a/core/rtw_mlme_ext.c
++++ b/core/rtw_mlme_ext.c
+@@ -7501,6 +7501,8 @@
+ void dump_mgntframe(_adapter *padapter, struct xmit_frame *pmgntframe)
+ {
+ 	if (RTW_CANNOT_RUN(padapter)) {
++		pr_debug("8192eu: dump_mgntframe gate: surprise=%d stopped=%d\n",
++			 rtw_is_surprise_removed(padapter), rtw_is_drv_stopped(padapter));
+ 		rtw_free_xmitbuf(&padapter->xmitpriv, pmgntframe->pxmitbuf);
+ 		rtw_free_xmitframe(&padapter->xmitpriv, pmgntframe);
+ 		return;
+@@ -11918,7 +11920,12 @@
+ 		self_action = MLME_STA_DISCONNECTED;
+ 	else if (MLME_IS_ADHOC(padapter) || MLME_IS_ADHOC_MASTER(padapter))
+ 		self_action = MLME_ADHOC_STOPPED;
+-	else {
++	else if (MLME_IS_MONITOR(padapter)) {
++		/* monitor iftype has no MLME link: disconnect is a no-op.
++		 * Realtek's chain forgot this state -> rtw_warn_on(1) on every
++		 * monitor->AP transition. Keep the rest of the function running
++		 * exactly as the warn path did, minus the warning. */
++	} else {
+ 		RTW_INFO("state:0x%x\n", MLME_STATE(padapter));
+ 		rtw_warn_on(1);
+ 	}--- a/hal/rtl8192e/usb/rtl8192eu_xmit.c
++++ b/hal/rtl8192e/usb/rtl8192eu_xmit.c
+@@ -350,6 +350,8 @@
+ 	struct pkt_attrib *pattrib = &pxmitframe->attrib;
+ 	struct xmit_priv *pxmitpriv = &padapter->xmitpriv;
+ 	struct security_priv *psecuritypriv = &padapter->securitypriv;
++	pr_debug("8192eu: monitor-path dump_xframe entry qsel=%u len=%u\n",
++		 pattrib->qsel, pattrib->last_txcmdsz);
+ #ifdef CONFIG_80211N_HT
+ 	if ((pxmitframe->frame_tag == DATA_FRAMETAG) &&
+ 	    (pxmitframe->attrib.ether_type != 0x0806) &&
+@@ -398,6 +400,7 @@
+ 
+ #else
+ 		inner_ret = rtw_write_port(padapter, ff_hwaddr, w_sz, (unsigned char *)pxmitbuf);
++		pr_debug("8192eu: dump_xframe write_port ret=%d w_sz=%d\n", inner_ret, w_sz);
+ #endif
+ 
+ 		rtw_count_tx_stats(padapter, pxmitframe, sz);

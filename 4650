@@ -1,0 +1,19 @@
+	if (pattrib->hipriority_pkt) {
+		pattrib->qsel = QSLT_VO;
+		pattrib->priority  = QSLT_VO;
+	}
+}
+
+/*
+ * The main transmit(tx) entry
+ *
+ * Return
+ *	1	enqueue
+ *	0	success, hardware will handle this xmit frame(packet)
+ *	<0	fail
+ */
+ #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 24))
+s32 rtw_monitor_xmit_entry(struct sk_buff *skb, struct net_device *ndev)
+{
+	u16 frame_ctl;
+===
