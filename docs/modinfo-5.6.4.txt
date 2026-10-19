@@ -1,0 +1,131 @@
+filename:       /lib/modules/6.8.0-146-generic/updates/dkms/8192eu.ko
+version:        v5.6.4_35685.20191108_COEX20171113-0047
+author:         Realtek Semiconductor Corp.
+description:    Realtek Wireless Lan Driver
+license:        GPL
+srcversion:     3D6908776A2F94B2C4D2A29
+alias:          usb:v2C4Ep0104d*dc*dsc*dp*ic*isc*ip*in*
+alias:          usb:v2C4Ep0100d*dc*dsc*dp*ic*isc*ip*in*
+alias:          usb:v2019pAB33d*dc*dsc*dp*ic*isc*ip*in*
+alias:          usb:v2357p0126d*dc*dsc*dp*ic*isc*ip*in*
+alias:          usb:v2357p0109d*dc*dsc*dp*ic*isc*ip*in*
+alias:          usb:v2357p0108d*dc*dsc*dp*ic*isc*ip*in*
+alias:          usb:v2357p0107d*dc*dsc*dp*ic*isc*ip*in*
+alias:          usb:v2001p3319d*dc*dsc*dp*ic*isc*ip*in*
+alias:          usb:v2001p3312d*dc*dsc*dp*ic*isc*ip*in*
+alias:          usb:v0BDAp818Cd*dc*dsc*dp*icFFiscFFipFFin*
+alias:          usb:v0BDAp818Bd*dc*dsc*dp*icFFiscFFipFFin*
+depends:        cfg80211
+retpoline:      Y
+name:           8192eu
+vermagic:       6.8.0-146-generic SMP preempt mod_unload modversions 
+sig_id:         PKCS#7
+signer:         lab Secure Boot Module Signature key
+sig_key:        08:09:56:9D:5D:C8:78:C6:DC:B8:01:89:92:80:B8:EF:FA:A2:15:4E
+sig_hashalgo:   sha512
+signature:      47:C2:5F:DD:F8:FB:FA:18:A9:44:95:4A:5C:7B:C1:6E:FC:31:12:AB:
+		B6:BF:B4:39:CC:71:96:86:6F:31:7D:2E:7A:89:7B:9E:5D:4D:07:8E:
+		BE:F4:C0:CD:BC:BA:89:BC:7B:16:20:A5:56:73:77:76:70:D5:A4:70:
+		E8:0A:98:42:5A:74:01:68:F3:4C:5A:B6:10:8A:17:A8:17:E2:E3:95:
+		09:97:F9:5E:DA:E5:E6:31:38:E0:60:03:C6:DC:B9:B1:3F:8B:BF:1D:
+		DA:76:78:E7:04:E4:33:D2:6D:40:39:F9:31:61:09:B4:71:4B:2E:6A:
+		0B:32:5C:6B:3E:01:64:AB:A2:89:B9:E9:B9:8D:C0:16:84:0B:2A:E0:
+		00:2C:FE:A8:52:69:F7:F9:1F:65:A7:C1:B2:3D:97:34:60:E8:8D:B3:
+		51:1B:84:A6:C3:2B:39:F7:A3:03:5E:A6:17:0B:AE:DF:37:64:4D:1D:
+		90:1D:EF:B8:6E:AE:F2:B3:C4:60:AC:72:DA:BF:C3:93:AC:AF:C1:A0:
+		C2:89:B9:06:00:2E:6C:E6:89:72:85:9F:A4:6D:FF:06:08:48:3A:80:
+		95:E2:66:CD:F2:05:87:BB:78:D6:A0:DB:E3:58:25:97:D4:8E:9A:B1:
+		A7:A2:C7:0A:C1:EA:42:F7:BE:52:C2:C4:04:45:4F:C1
+parm:           rtw_wireless_mode:int
+parm:           rtw_ips_mode:The default IPS mode (int)
+parm:           rtw_lps_level:The default LPS level (int)
+parm:           rtw_lps_chk_by_tp:int
+parm:           rtw_max_bss_cnt:int
+parm:           rtw_usb_rxagg_mode:int
+parm:           rtw_dynamic_agg_enable:int
+parm:           rtw_tx_bw_mode:The max tx bw for 2.4G and 5G. format is the same as rtw_bw_mode (uint)
+parm:           rtw_rx_ampdu_sz_limit_1ss:RX AMPDU size limit for 1SS link of each BW, 0xFF: no limitation (array of uint)
+parm:           rtw_rx_ampdu_sz_limit_2ss:RX AMPDU size limit for 2SS link of each BW, 0xFF: no limitation (array of uint)
+parm:           rtw_rx_ampdu_sz_limit_3ss:RX AMPDU size limit for 3SS link of each BW, 0xFF: no limitation (array of uint)
+parm:           rtw_rx_ampdu_sz_limit_4ss:RX AMPDU size limit for 4SS link of each BW, 0xFF: no limitation (array of uint)
+parm:           rtw_rf_config:int
+parm:           rtw_country_code:The default country code (in alpha2) (charp)
+parm:           rtw_channel_plan:The default chplan ID when rtw_alpha2 is not specified or valid (int)
+parm:           rtw_excl_chs:exclusive channel array (array of uint)
+parm:           rtw_btcoex_enable:BT co-existence on/off, 0:off, 1:on, 2:by efuse (int)
+parm:           rtw_ant_num:Antenna number setting, 0:by efuse (int)
+parm:           rtw_qos_opt_enable:int
+parm:           ifname:The default name to allocate for first interface (charp)
+parm:           if2name:The default name to allocate for second interface (charp)
+parm:           rtw_wowlan_sta_mix_mode:int
+parm:           rtw_pwrtrim_enable:int
+parm:           rtw_initmac:charp
+parm:           rtw_special_rf_path:int
+parm:           rtw_chip_version:int
+parm:           rtw_rfintfs:int
+parm:           rtw_lbkmode:int
+parm:           rtw_network_mode:int
+parm:           rtw_channel:int
+parm:           rtw_mp_mode:int
+parm:           rtw_wmm_enable:int
+parm:           rtw_vrtl_carrier_sense:int
+parm:           rtw_vcs_type:int
+parm:           rtw_busy_thresh:int
+parm:           rtw_ht_enable:int
+parm:           rtw_bw_mode:int
+parm:           rtw_ampdu_enable:int
+parm:           rtw_rx_stbc:int
+parm:           rtw_rx_ampdu_amsdu:int
+parm:           rtw_tx_ampdu_amsdu:int
+parm:           rtw_lowrate_two_xmit:int
+parm:           rtw_power_mgnt:int
+parm:           rtw_smart_ps:int
+parm:           rtw_low_power:int
+parm:           rtw_wifi_spec:int
+parm:           rtw_full_ch_in_p2p_handshake:int
+parm:           rtw_antdiv_cfg:int
+parm:           rtw_antdiv_type:int
+parm:           rtw_drv_ant_band_switch:int
+parm:           rtw_single_ant_path:int
+parm:           rtw_switch_usb_mode:int
+parm:           rtw_enusbss:int
+parm:           rtw_hwpdn_mode:int
+parm:           rtw_hwpwrp_detect:int
+parm:           rtw_hw_wps_pbc:int
+parm:           rtw_check_hw_status:int
+parm:           rtw_max_roaming_times:The max roaming times to try (uint)
+parm:           rtw_mc2u_disable:int
+parm:           rtw_notch_filter:0:Disable, 1:Enable, 2:Enable only for P2P (uint)
+parm:           rtw_hiq_filter:0:allow all, 1:allow special, 2:deny all (uint)
+parm:           rtw_adaptivity_en:0:disable, 1:enable (uint)
+parm:           rtw_adaptivity_mode:0:normal, 1:carrier sense (uint)
+parm:           rtw_adaptivity_th_l2h_ini:th_l2h_ini for Adaptivity (int)
+parm:           rtw_adaptivity_th_edcca_hl_diff:th_edcca_hl_diff for Adaptivity (int)
+parm:           rtw_amplifier_type_2g:BIT3:2G ext-PA, BIT4:2G ext-LNA (uint)
+parm:           rtw_amplifier_type_5g:BIT6:5G ext-PA, BIT7:5G ext-LNA (uint)
+parm:           rtw_RFE_type:default init value:64 (uint)
+parm:           rtw_powertracking_type:default init value:64 (uint)
+parm:           rtw_GLNA_type:default init value:0 (uint)
+parm:           rtw_TxBBSwing_2G:default init value:0xFF (uint)
+parm:           rtw_TxBBSwing_5G:default init value:0xFF (uint)
+parm:           rtw_OffEfuseMask:default open Efuse Mask value:0 (uint)
+parm:           rtw_FileMaskEfuse:default drv Mask Efuse value:0 (uint)
+parm:           rtw_rxgain_offset_2g:default RF Gain 2G Offset value:0 (uint)
+parm:           rtw_rxgain_offset_5gl:default RF Gain 5GL Offset value:0 (uint)
+parm:           rtw_rxgain_offset_5gh:uint
+parm:           rtw_rxgain_offset_5gm:default RF Gain 5GM Offset value:0 (uint)
+parm:           rtw_pll_ref_clk_sel:force pll_ref_clk_sel, 0xF:use autoload value (uint)
+parm:           rtw_tx_pwr_by_rate:0:Disable, 1:Enable, 2: Depend on efuse (int)
+parm:           rtw_tx_pwr_lmt_enable:0:Disable, 1:Enable, 2: Depend on efuse (int)
+parm:           rtw_target_tx_pwr_2g_a:2.4G target tx power (unit:dBm) of RF path A for each rate section, should match the real calibrate power, -1: undefined (array of int)
+parm:           rtw_target_tx_pwr_2g_b:2.4G target tx power (unit:dBm) of RF path B for each rate section, should match the real calibrate power, -1: undefined (array of int)
+parm:           rtw_target_tx_pwr_2g_c:2.4G target tx power (unit:dBm) of RF path C for each rate section, should match the real calibrate power, -1: undefined (array of int)
+parm:           rtw_target_tx_pwr_2g_d:2.4G target tx power (unit:dBm) of RF path D for each rate section, should match the real calibrate power, -1: undefined (array of int)
+parm:           rtw_tsf_update_pause_factor:num of bcn intervals to stay TSF update pause status (int)
+parm:           rtw_tsf_update_restore_factor:num of bcn intervals to stay TSF update restore status (int)
+parm:           rtw_phy_file_path:The path of phy parameter (charp)
+parm:           rtw_load_phy_file:PHY File Bit Map (int)
+parm:           rtw_decrypt_phy_file:Enable Decrypt PHY File (int)
+parm:           rtw_en_napi:int
+parm:           rtw_iqk_fw_offload:int
+parm:           rtw_ch_switch_offload:int
