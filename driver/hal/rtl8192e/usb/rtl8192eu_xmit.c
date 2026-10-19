@@ -350,6 +350,8 @@ static s32 rtw_dump_xframe(_adapter *padapter, struct xmit_frame *pxmitframe)
 	struct pkt_attrib *pattrib = &pxmitframe->attrib;
 	struct xmit_priv *pxmitpriv = &padapter->xmitpriv;
 	struct security_priv *psecuritypriv = &padapter->securitypriv;
+	pr_debug("8192eu: monitor-path dump_xframe entry qsel=%u len=%u\n",
+		 pattrib->qsel, pattrib->last_txcmdsz);
 #ifdef CONFIG_80211N_HT
 	if ((pxmitframe->frame_tag == DATA_FRAMETAG) &&
 	    (pxmitframe->attrib.ether_type != 0x0806) &&
@@ -398,6 +400,7 @@ static s32 rtw_dump_xframe(_adapter *padapter, struct xmit_frame *pxmitframe)
 
 #else
 		inner_ret = rtw_write_port(padapter, ff_hwaddr, w_sz, (unsigned char *)pxmitbuf);
+		pr_debug("8192eu: dump_xframe write_port ret=%d w_sz=%d\n", inner_ret, w_sz);
 #endif
 
 		rtw_count_tx_stats(padapter, pxmitframe, sz);
