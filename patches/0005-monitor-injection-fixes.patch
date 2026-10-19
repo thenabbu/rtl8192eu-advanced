@@ -8,7 +8,8 @@
 +	#define CONFIG_MONITOR_MODE_XMIT
  #endif
  
- #ifdef CONFIG_CUSTOMER_ALIBABA_GENERAL--- a/core/rtw_xmit.c
+ #ifdef CONFIG_CUSTOMER_ALIBABA_GENERAL
+--- a/core/rtw_xmit.c
 +++ b/core/rtw_xmit.c
 @@ -4738,8 +4738,13 @@
  	if (unlikely(skb->len < rtap_len))

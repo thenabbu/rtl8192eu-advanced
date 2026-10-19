@@ -4738,8 +4738,13 @@ s32 rtw_monitor_xmit_entry(struct sk_buff *skb, struct net_device *ndev)
 	if (unlikely(skb->len < rtap_len))
 		goto fail;
 
-	if (rtap_len != 12) {
-		RTW_INFO("radiotap len (should be 14): %d\n", rtap_len);
+	/* stock code demanded rtap_len == 12 exactly (and its own message
+	 * said 14), dropping every standard radiotap TX header (aireplay-ng,
+	 * scapy defaults). Accept any well-formed radiotap header. */
+	if (rtap_len < sizeof(struct ieee80211_radiotap_header)
+	    || rtap_len > skb->len) {
+		pr_debug("8192eu: monitor xmit bad radiotap len %d (skb %d)\n",
+			 rtap_len, (int)skb->len);
 		goto fail;
 	}
 	_rtw_pktfile_read(&pktfile, dummybuf, rtap_len-sizeof(struct ieee80211_radiotap_header));
@@ -4781,6 +4786,8 @@ s32 rtw_monitor_xmit_entry(struct sk_buff *skb, struct net_device *ndev)
 	pmlmeext->mgnt_seq++;
 	pattrib->last_txcmdsz = pattrib->pktlen;
 
+	pr_debug("8192eu: monitor xmit dumping len=%d rate=%u qsel=%u\n",
+		 pattrib->pktlen, pattrib->rate, pattrib->qsel);
 	dump_mgntframe(padapter, pmgntframe);
 
 fail:

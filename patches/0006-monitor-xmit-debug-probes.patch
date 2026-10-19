@@ -22,7 +22,8 @@
 +	} else {
  		RTW_INFO("state:0x%x\n", MLME_STATE(padapter));
  		rtw_warn_on(1);
- 	}--- a/hal/rtl8192e/usb/rtl8192eu_xmit.c
+ 	}
+--- a/hal/rtl8192e/usb/rtl8192eu_xmit.c
 +++ b/hal/rtl8192e/usb/rtl8192eu_xmit.c
 @@ -350,6 +350,8 @@
  	struct pkt_attrib *pattrib = &pxmitframe->attrib;
