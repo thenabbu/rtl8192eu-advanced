@@ -1118,10 +1118,22 @@ static _adapter *rtw_usb_primary_adapter_init(struct dvobj_priv *dvobj,
 #endif
 	/* 2012-07-11 Move here to prevent the 8723AS-VAU BT auto suspend influence */
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 33))
-	if (usb_autopm_get_interface(pusb_intf) < 0)
+	if (usb_autopm_get_interface(pusb_intf) < 0) {
 		RTW_INFO("can't get autopm:\n");
-#endif
+		pr_debug("8192eu: probe autopm get FAILED, usage=%d\n",
+			 atomic_read(&pusb_intf->dev.power.usage_count));
 #ifdef CONFIG_BT_COEXIST
+		/* no hold was taken: never put at remove time (underflow guard) */
+		dvobj_to_pwrctl(dvobj)->autopm_cnt = 0;
+#endif
+	} else {
+		pr_debug("8192eu: probe autopm get ok, usage=%d\n",
+			 atomic_read(&pusb_intf->dev.power.usage_count));
+#ifdef CONFIG_BT_COEXIST
+		dvobj_to_pwrctl(dvobj)->autopm_cnt = 1;
+#endif
+	}
+#elif defined(CONFIG_BT_COEXIST)
 	dvobj_to_pwrctl(dvobj)->autopm_cnt = 1;
 #endif
 
@@ -1192,6 +1204,8 @@ static void rtw_usb_primary_adapter_deinit(_adapter *padapter)
 #ifdef CONFIG_BT_COEXIST
 	if (1 == pwrctl->autopm_cnt) {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 33))
+		pr_debug("8192eu: remove put, usage_before=%d\n",
+			 atomic_read(&adapter_to_dvobj(padapter)->pusbintf->dev.power.usage_count));
 		usb_autopm_put_interface(adapter_to_dvobj(padapter)->pusbintf);
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 20))
 		usb_autopm_enable(adapter_to_dvobj(padapter)->pusbintf);
