@@ -14,6 +14,7 @@ by RE-ing the live device on the wire:
 | `0001-usb-autopm-hold-guard` | Runtime-PM usage-count underflow on every `rmmod` (present in official *and* community drivers): probe takes a PM hold, silently fails on modern kernels, driver still puts it at remove |
 | `0002-mlme-disconnect-monitor-noop` | `rtw_warn_on(1)` + full stack dump on every monitor→AP transition — Realtek added `MLME_IS_MONITOR` but forgot the branch in `rtw_mlmeext_disconnect()` |
 | `0003-enable-wifi-monitor-mode` | `CONFIG_WIFI_MONITOR=y` — official stock ships monitor mode compiled out |
+| `0004-wire-tx-power-offset-knob` | `tx_power_offset` proc knob was dead code upstream (never consumed) — now adds +N dBm (0-5) to every rate, verified on the wire/dumps |
 
 Verified on Linux 6.8 (Ubuntu 24.04) with live AP duty (hostapd), live
 monitor capture, and A/B kernel-log proof for each fix (see `docs/`).
@@ -54,10 +55,10 @@ DKMS: copy the patched tree to `/usr/src/rtl8192eu-1.0`, then
 
 Running as the house AP driver on the lab host since 2026-10-19: hostapd
 (AP mode), monitor mode, client re-association ~9 s after module bounce,
-zero kernel warnings. LED control shipped (`tools/rtlled.sh` + `docs/led-control.md` — register
-driver via procfs, wire-verified). Roadmap: TX-power/RF control surface,
-`led_config` strategy build flag, Windows `rtwlanu.sys` comparison
-(Ghidra), TX injection.
+zero kernel warnings. LED control shipped (`tools/rtlled.sh` + `docs/led-control.md`) and
+tx_power_offset made real (patch 0004, see `docs/txpower-control.md`) —
+both wire/dump-verified. Roadmap: `led_config` strategy build flag,
+Windows `rtwlanu.sys` comparison (Ghidra), TX injection.
 
 ## Provenance & license
 

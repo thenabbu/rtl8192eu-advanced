@@ -1,0 +1,15 @@
+--- a/hal/hal_com_phycfg.c
++++ b/hal/hal_com_phycfg.c
+@@ -5952,6 +5952,12 @@
+ 
+ 	extra = rtw_hal_get_txpwr_target_extra_bias(adapter, rfpath, rs, rate, bw, band, cch);
+ 
++	/* procfs tx_power_offset knob (dBm) was dead code: set + printed but
++	 * never consumed. Wire it into the target as extra bias, in TX gain
++	 * index units. Clamped upstream to 0..5 dBm; the lmt/ulmt min() below
++	 * still bounds the final value. */
++	extra += adapter->power_offset * hal_spec->txgi_pdbm;
++
+ get_lmt:
+ 	lmt = phy_get_txpwr_lmt_sub_chs(adapter, NULL, band, bw, rfpath, rate, ntx_idx, cch, opch);
+ 	ulmt = phy_get_txpwr_user_lmt(adapter, hal_spec, ntx_idx);
