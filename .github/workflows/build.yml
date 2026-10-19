@@ -1,0 +1,25 @@
+name: build-driver
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        container: [ubuntu:22.04, ubuntu:24.04]
+    container: ${{ matrix.container }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install kernel headers
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq build-essential linux-headers-generic bc kmod > /dev/null
+      - name: Build
+        run: |
+          KVER=$(ls /lib/modules | head -1)
+          echo "Building for $KVER"
+          cd driver && make KVER=$KVER -j"$(nproc)" 2>&1 | tail -25
+          test -f 8192eu.ko
+          modinfo 8192eu.ko | grep -E '^(version|vermagic)'

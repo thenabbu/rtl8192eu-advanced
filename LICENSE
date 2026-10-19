@@ -1,0 +1,11 @@
+GPL-2.0-only
+
+This project is a fork of Realtek's RTL8192EU Linux kernel driver
+(v5.11.2.1). The driver source under driver/ carries Realtek's original
+per-file copyright headers and is licensed under the GNU General Public
+License, version 2 (as stated in each file's header). Original
+documentation, tooling and patches added by this project are provided
+under the same terms.
+
+The full GPL-2.0 text is available at:
+https://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
