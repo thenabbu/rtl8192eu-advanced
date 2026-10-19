@@ -1,0 +1,22 @@
+=== before ===
+1792358152.226019878
+	ssid BlockiNG
+	type AP
+2
+=== start capture ===
+=== stop hostapd ===
+=== rmmod ===
+rmmod rc=0
+=== modprobe ===
+modprobe rc=0
+=== start hostapd ===
+1792358173.599200452
+=== after ===
+active
+active
+	addr 8c:90:2d:95:2a:8d
+	ssid BlockiNG
+	type AP
+    inet 10.10.20.1/24 brd 10.10.20.255 scope global wlan0
+=== capture done ===
+24290 /home/nabbu/tplink-re/captures/usbmon-init.txt

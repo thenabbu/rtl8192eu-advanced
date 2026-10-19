@@ -1,0 +1,25 @@
+=== 2026-10-19 06:58:48 IST ===
+== baseline ==
+active
+old srcversion: 3D6908776A2F94B2C4D2A29
+-rw-rw-r-- 1 nabbu nabbu 4254344 Oct 19 06:30 /home/nabbu/tplink-re/src/rtl8192eu-linux-5.11.2.1/8192eu.ko
+== start usbmon capture ==
+== stop hostapd ==
+== rmmod old ==
+rmmod rc=0
+== insmod NEW 5.11.2.1 ==
+insmod rc=0
+== start hostapd ==
+== result ==
+active
+active
+loaded srcversion: 3D6908776A2F94B2C4D2A29 (old was 3D6908776A2F94B2C4D2A29)
+!! SAME MODULE - still old!
+version:        v5.6.4_35685.20191108_COEX20171113-0047
+srcversion:     3D6908776A2F94B2C4D2A29
+	addr 8c:90:2d:95:2a:8d
+	ssid BlockiNG
+	type AP
+    inet 10.10.20.1/24 brd 10.10.20.255 scope global wlan0
+19476 /home/nabbu/tplink-re/captures/usbmon-init-511.txt
+=== SWAP_TEST_DONE ===
