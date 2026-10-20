@@ -1,0 +1,835 @@
+# rtwlanu.sys v1030.2 — FUN_140019850 pseudocode (Ghidra 12.1.4, harvested 2026-10-20)
+# Spill evidence: /opt/data/cache/spillover/call_6090fb79f47a.txt
+
+
+void FUN_140034560(uint param_1)
+
+{
+  char *pcVar1;
+  
+  if (param_1 < 0x10203) {
+    if (param_1 == 0x10202) {
+      pcVar1 = "OID_GEN_PHYSICAL_MEDIUM";
+      goto LAB_14003537f;
+    }
+    switch(param_1) {
+    case 0x10101:
+      pcVar1 = "OID_GEN_SUPPORTED_LIST";
+      break;
+    case 0x10102:
+      pcVar1 = "OID_GEN_HARDWARE_STATUS";
+      break;
+    case 0x10103:
+      pcVar1 = "OID_GEN_MEDIA_SUPPORTED";
+      break;
+    case 0x10104:
+      pcVar1 = "OID_GEN_MEDIA_IN_USE";
+      break;
+    case 0x10105:
+      pcVar1 = "OID_GEN_MAXIMUM_LOOKAHEAD";
+      break;
+    case 0x10106:
+      pcVar1 = "OID_GEN_MAXIMUM_FRAME_SIZE";
+      break;
+    case 0x10107:
+      pcVar1 = "OID_GEN_LINK_SPEED";
+      break;
+    case 0x10108:
+      pcVar1 = "OID_GEN_TRANSMIT_BUFFER_SPACE";
+      break;
+    case 0x10109:
+      pcVar1 = "OID_GEN_RECEIVE_BUFFER_SPACE";
+      break;
+    case 0x1010a:
+      pcVar1 = "OID_GEN_TRANSMIT_BLOCK_SIZE";
+      break;
+    case 0x1010b:
+      pcVar1 = "OID_GEN_RECEIVE_BLOCK_SIZE";
+      break;
+    case 0x1010c:
+      pcVar1 = "OID_GEN_VENDOR_ID";
+      break;
+    case 0x1010d:
+      pcVar1 = "OID_GEN_VENDOR_DESCRIPTION";
+      break;
+    case 0x1010e:
+      pcVar1 = "OID_GEN_CURRENT_PACKET_FILTER";
+      break;
+    case 0x1010f:
+      pcVar1 = "OID_GEN_CURRENT_LOOKAHEAD";
+      break;
+    case 0x10110:
+      pcVar1 = "OID_GEN_DRIVER_VERSION";
+      break;
+    case 0x10111:
+      pcVar1 = "OID_GEN_MAXIMUM_TOTAL_SIZE";
+      break;
+    case 0x10112:
+      pcVar1 = "OID_GEN_PROTOCOL_OPTIONS";
+      break;
+    case 0x10113:
+      pcVar1 = "OID_GEN_MAC_OPTIONS";
+      break;
+    case 0x10114:
+      pcVar1 = "OID_GEN_MEDIA_CONNECT_STATUS";
+      break;
+    case 0x10115:
+      pcVar1 = "OID_GEN_MAXIMUM_SEND_PACKETS";
+      break;
+    case 0x10116:
+      pcVar1 = "OID_GEN_VENDOR_DRIVER_VERSION";
+      break;
+    case 0x10117:
+      pcVar1 = "OID_GEN_SUPPORTED_GUIDS";
+      break;
+    case 0x10118:
+      pcVar1 = "OID_GEN_NETWORK_LAYER_ADDRESSES";
+      break;
+    default:
+      goto switchD_14003459a_default;
+    }
+    goto LAB_14003537f;
+  }
+  if (param_1 < 0xe01017b) {
+    if (param_1 == 0xe01017a) {
+      pcVar1 = "OID_DOT11_FLUSH_BSS_LIST";
+      goto LAB_14003537f;
+    }
+    if (param_1 < 0xd010321) {
+      if (param_1 == 0xd010320) {
+        pcVar1 = "OID_DOT11_SHORT_RETRY_LIMIT";
+        goto LAB_14003537f;
+      }
+      if (param_1 < 0x1020203) {
+        if (param_1 == 0x1020202) {
+          pcVar1 = "OID_802_3_XMIT_MAX_COLLISIONS";
+          goto LAB_14003537f;
+        }
+        if (param_1 < 0x20107) {
+          if (param_1 == 0x20106) {
+            pcVar1 = "OID_GEN_STATISTICS";
+            goto LAB_14003537f;
+          }
+          if (param_1 < 0x20102) {
+            if (param_1 == 0x20101) {
+              pcVar1 = "OID_GEN_XMIT_OK";
+              goto LAB_14003537f;
+            }
+            if (param_1 == 0x10208) {
+              pcVar1 = "OID_GEN_LINK_PARAMETERS";
+              goto LAB_14003537f;
+            }
+            if (param_1 == 0x10209) {
+              pcVar1 = "OID_GEN_INTERRUPT_MODERATION";
+              goto LAB_14003537f;
+            }
+            if (param_1 == 0x10227) {
+              pcVar1 = "OID_RECEIVE_FILTER_SET_FILTER";
+              goto LAB_14003537f;
+            }
+            if (param_1 == 0x10228) {
+              pcVar1 = "OID_RECEIVE_FILTER_CLEAR_FILTER";
+              goto LAB_14003537f;
+            }
+            if (param_1 == 0x10235) {
+              pcVar1 = "OID_PACKET_COALESCING_FILTER_MATCH_COUNT";
+              goto LAB_14003537f;
+            }
+          }
+          else {
+            if (param_1 == 0x20102) {
+              pcVar1 = "OID_GEN_RCV_OK";
+              goto LAB_14003537f;
+            }
+            if (param_1 == 0x20103) {
+              pcVar1 = "OID_GEN_XMIT_ERROR";
+              goto LAB_14003537f;
+            }
+            if (param_1 == 0x20104) {
+              pcVar1 = "OID_GEN_RCV_ERROR";
+              goto LAB_14003537f;
+            }
+            if (param_1 == 0x20105) {
+              pcVar1 = "OID_GEN_RCV_NO_BUFFER";
+              goto LAB_14003537f;
+            }
+          }
+        }
+        else if (param_1 < 0x1010105) {
+          if (param_1 == 0x1010104) {
+            pcVar1 = "OID_802_3_MAXIMUM_LIST_SIZE";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0x2020d) {
+            pcVar1 = "OID_GEN_RCV_CRC_ERROR";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0x2020e) {
+            pcVar1 = "OID_GEN_TRANSMIT_QUEUE_LENGTH";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0x1010101) {
+            pcVar1 = "OID_802_3_PERMANENT_ADDRESS";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0x1010102) {
+            pcVar1 = "OID_802_3_CURRENT_ADDRESS";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0x1010103) {
+            pcVar1 = "OID_802_3_MULTICAST_LIST";
+            goto LAB_14003537f;
+          }
+        }
+        else {
+          if (param_1 == 0x1020101) {
+            pcVar1 = "OID_802_3_RCV_ERROR_ALIGNMENT";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0x1020102) {
+            pcVar1 = "OID_802_3_XMIT_ONE_COLLISION";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0x1020103) {
+            pcVar1 = "OID_802_3_XMIT_MORE_COLLISIONS";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0x1020201) {
+            pcVar1 = "OID_802_3_XMIT_DEFERRED";
+            goto LAB_14003537f;
+          }
+        }
+      }
+      else if (param_1 < 0xd010311) {
+        if (param_1 == 0xd010310) {
+          pcVar1 = "OID_DOT11_RESET_REQUEST";
+          goto LAB_14003537f;
+        }
+        if (param_1 < 0xd010307) {
+          if (param_1 == 0xd010306) {
+            pcVar1 = "OID_DOT11_MPDU_MAX_LENGTH";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0x1020203) {
+            pcVar1 = "OID_802_3_RCV_OVERRUN";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0x1020204) {
+            pcVar1 = "OID_802_3_XMIT_UNDERRUN";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0x1020205) {
+            pcVar1 = "OID_802_3_XMIT_HEARTBEAT_FAILURE";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0x1020206) {
+            pcVar1 = "OID_802_3_XMIT_TIMES_CRS_LOST";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0x1020207) {
+            pcVar1 = "OID_802_3_XMIT_LATE_COLLISIONS";
+            goto LAB_14003537f;
+          }
+        }
+        else {
+          if (param_1 == 0xd010307) {
+            pcVar1 = "OID_DOT11_OPERATION_MODE_CAPABILITY";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0xd010308) {
+            pcVar1 = "OID_DOT11_CURRENT_OPERATION_MODE";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0xd01030a) {
+            pcVar1 = "OID_DOT11_ATIM_WINDOW";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0xd01030b) {
+            pcVar1 = "OID_DOT11_SCAN_REQUEST";
+            goto LAB_14003537f;
+          }
+        }
+      }
+      else if (param_1 < 0xd01031b) {
+        if (param_1 == 0xd01031a) {
+          pcVar1 = "OID_DOT11_OPERATIONAL_RATE_SET";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xd010311) {
+          pcVar1 = "OID_DOT11_NIC_POWER_STATE";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xd010312) {
+          pcVar1 = "OID_DOT11_OPTIONAL_CAPABILITY";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xd010313) {
+          pcVar1 = "OID_DOT11_CURRENT_OPTIONAL_CAPABILITY";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xd010314) {
+          pcVar1 = "OID_DOT11_STATION_ID";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xd010316) {
+          pcVar1 = "OID_DOT11_CF_POLLABLE";
+          goto LAB_14003537f;
+        }
+      }
+      else {
+        if (param_1 == 0xd01031b) {
+          pcVar1 = "OID_DOT11_BEACON_PERIOD";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xd01031c) {
+          pcVar1 = "OID_DOT11_DTIM_PERIOD";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xd01031e) {
+          pcVar1 = "OID_DOT11_MAC_ADDRESS";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xd01031f) {
+          pcVar1 = "OID_DOT11_RTS_THRESHOLD";
+          goto LAB_14003537f;
+        }
+      }
+    }
+    else if (param_1 < 0xd010703) {
+      if (param_1 == 0xd010702) {
+        pcVar1 = "OID_DOT11_CURRENT_ADDRESS";
+        goto LAB_14003537f;
+      }
+      if (param_1 < 0xd010341) {
+        if (param_1 == 0xd010340) {
+          pcVar1 = "OID_DOT11_DIVERSITY_SELECTION_RX";
+          goto LAB_14003537f;
+        }
+        if (param_1 < 0xd01032c) {
+          if (param_1 == 0xd01032b) {
+            pcVar1 = "OID_DOT11_CURRENT_RX_ANTENNA";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0xd010321) {
+            pcVar1 = "OID_DOT11_LONG_RETRY_LIMIT";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0xd010322) {
+            pcVar1 = "OID_DOT11_FRAGMENTATION_THRESHOLD";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0xd010323) {
+            pcVar1 = "OID_DOT11_MAX_TRANSMIT_MSDU_LIFETIME";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0xd010324) {
+            pcVar1 = "OID_DOT11_MAX_RECEIVE_LIFETIME";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0xd010326) {
+            pcVar1 = "OID_DOT11_SUPPORTED_PHY_TYPES";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0xd010327) {
+            pcVar1 = "OID_DOT11_CURRENT_REG_DOMAIN";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0xd010328) {
+            pcVar1 = "OID_DOT11_TEMP_TYPE";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0xd010329) {
+            pcVar1 = "OID_DOT11_CURRENT_TX_ANTENNA";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0xd01032a) {
+            pcVar1 = "OID_DOT11_DIVERSITY_SUPPORT";
+            goto LAB_14003537f;
+          }
+        }
+        else {
+          if (param_1 == 0xd01032c) {
+            pcVar1 = "OID_DOT11_SUPPORTED_POWER_LEVELS";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0xd01032d) {
+            pcVar1 = "OID_DOT11_CURRENT_TX_POWER_LEVEL";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0xd010335) {
+            pcVar1 = "OID_DOT11_CURRENT_CHANNEL";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0xd010336) {
+            pcVar1 = "OID_DOT11_CCA_MODE_SUPPORTED";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0xd010337) {
+            pcVar1 = "OID_DOT11_CURRENT_CCA_MODE";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0xd010338) {
+            pcVar1 = "OID_DOT11_ED_THRESHOLD";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0xd01033d) {
+            pcVar1 = "OID_DOT11_REG_DOMAINS_SUPPORT_VALUE";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0xd01033e) {
+            pcVar1 = "OID_DOT11_SUPPORTED_TX_ANTENNA";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0xd01033f) {
+            pcVar1 = "OID_DOT11_SUPPORTED_RX_ANTENNA";
+            goto LAB_14003537f;
+          }
+        }
+      }
+      else if (param_1 < 0xd01034d) {
+        if (param_1 == 0xd01034c) {
+          pcVar1 = "OID_DOT11_COUNTRY_STRING";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xd010341) {
+          pcVar1 = "OID_DOT11_SUPPORTED_DATA_RATES_VALUE";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xd010342) {
+          pcVar1 = "OID_DOT11_CURRENT_FREQUENCY";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xd010344) {
+          pcVar1 = "OID_DOT11_FREQUENCY_BANDS_SUPPORTED";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xd010345) {
+          pcVar1 = "OID_DOT11_SHORT_PREAMBLE_OPTION_IMPLEMENTED";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xd010346) {
+          pcVar1 = "OID_DOT11_PBCC_OPTION_IMPLEMENTED";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xd010347) {
+          pcVar1 = "OID_DOT11_CHANNEL_AGILITY_PRESENT";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xd010348) {
+          pcVar1 = "OID_DOT11_CHANNEL_AGILITY_ENABLED";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xd01034a) {
+          pcVar1 = "OID_DOT11_MULTI_DOMAIN_CAPABILITY_IMPLEMENTED";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xd01034b) {
+          pcVar1 = "OID_DOT11_MULTI_DOMAIN_CAPABILITY_ENABLED";
+          goto LAB_14003537f;
+        }
+      }
+      else {
+        if (param_1 == 0xd01035b) {
+          pcVar1 = "OID_DOT11_RF_USAGE";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xd01035e) {
+          pcVar1 = "OID_DOT11_ERP_PBCC_OPTION_IMPLEMENTED";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xd01035f) {
+          pcVar1 = "OID_DOT11_ERP_PBCC_OPTION_ENABLED";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xd010360) {
+          pcVar1 = "OID_DOT11_DSSS_OFDM_OPTION_IMPLEMENTED";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xd010361) {
+          pcVar1 = "OID_DOT11_DSSS_OFDM_OPTION_ENABLED";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xd010362) {
+          pcVar1 = "OID_DOT11_SHORT_SLOT_TIME_OPTION_IMPLEMENTED";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xd010363) {
+          pcVar1 = "OID_DOT11_SHORT_SLOT_TIME_OPTION_ENABLED";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xd010364) {
+          pcVar1 = "OID_DOT11_MAX_MAC_ADDRESS_STATES";
+          goto LAB_14003537f;
+        }
+      }
+    }
+    else {
+      if (param_1 == 0xd010703) {
+        pcVar1 = "OID_DOT11_PERMANENT_ADDRESS";
+        goto LAB_14003537f;
+      }
+      if (param_1 == 0xe010178) {
+        pcVar1 = "OID_DOT11_AUTO_CONFIG_ENABLED";
+        goto LAB_14003537f;
+      }
+      if (param_1 == 0xe010179) {
+        pcVar1 = "OID_DOT11_ENUM_BSS_LIST";
+        goto LAB_14003537f;
+      }
+    }
+  }
+  else {
+    if (param_1 < 0xe010281) {
+      if (param_1 == 0xe010280) {
+        pcVar1 = "OID_DOT11_PMKID_LIST";
+        goto LAB_14003537f;
+      }
+      switch(param_1) {
+      case 0xe01017b:
+        pcVar1 = "OID_DOT11_POWER_MGMT_REQUEST";
+        break;
+      case 0xe01017c:
+        pcVar1 = "OID_DOT11_DESIRED_SSID_LIST";
+        break;
+      case 0xe01017d:
+        pcVar1 = "OID_DOT11_EXCLUDED_MAC_ADDRESS_LIST";
+        break;
+      case 0xe01017e:
+        pcVar1 = "OID_DOT11_DESIRED_BSSID_LIST";
+        break;
+      case 0xe01017f:
+        pcVar1 = "OID_DOT11_DESIRED_BSS_TYPE";
+        break;
+      default:
+        goto switchD_14003459a_default;
+      case 0xe010181:
+        pcVar1 = "OID_DOT11_CONNECT_REQUEST";
+        break;
+      case 0xe010182:
+        pcVar1 = "OID_DOT11_EXCLUDE_UNENCRYPTED";
+        break;
+      case 0xe010184:
+        pcVar1 = "OID_DOT11_PRIVACY_EXEMPTION_LIST";
+        break;
+      case 0xe010185:
+        pcVar1 = "OID_DOT11_ENABLED_AUTHENTICATION_ALGORITHM";
+        break;
+      case 0xe010186:
+        pcVar1 = "OID_DOT11_SUPPORTED_UNICAST_ALGORITHM_PAIR";
+        break;
+      case 0xe010187:
+        pcVar1 = "OID_DOT11_ENABLED_UNICAST_CIPHER_ALGORITHM";
+        break;
+      case 0xe010188:
+        pcVar1 = "OID_DOT11_SUPPORTED_MULTICAST_ALGORITHM_PAIR";
+        break;
+      case 0xe010189:
+        pcVar1 = "OID_DOT11_ENABLED_MULTICAST_CIPHER_ALGORITHM";
+        break;
+      case 0xe01018a:
+        pcVar1 = "OID_DOT11_CIPHER_DEFAULT_KEY_ID";
+        break;
+      case 0xe01018b:
+        pcVar1 = "OID_DOT11_CIPHER_DEFAULT_KEY";
+        break;
+      case 0xe01018c:
+        pcVar1 = "OID_DOT11_CIPHER_KEY_MAPPING_KEY";
+        break;
+      case 0xe01018d:
+        pcVar1 = "OID_DOT11_ENUM_ASSOCIATION_INFO";
+        break;
+      case 0xe01018e:
+        pcVar1 = "OID_DOT11_DISCONNECT_REQUEST";
+        break;
+      case 0xe01018f:
+        pcVar1 = "OID_DOT11_UNICAST_USE_GROUP_ENABLED";
+        break;
+      case 0xe010190:
+        pcVar1 = "OID_DOT11_HARDWARE_PHY_STATE";
+        break;
+      case 0xe010191:
+        pcVar1 = "OID_DOT11_DESIRED_PHY_LIST";
+        break;
+      case 0xe010192:
+        pcVar1 = "OID_DOT11_CURRENT_PHY_ID";
+        break;
+      case 0xe010193:
+        pcVar1 = "OID_DOT11_MEDIA_STREAMING_ENABLED";
+        break;
+      case 0xe010194:
+        pcVar1 = "OID_DOT11_UNREACHABLE_DETECTION_THRESHOLD";
+        break;
+      case 0xe010195:
+        pcVar1 = "OID_DOT11_ACTIVE_PHY_LIST";
+        break;
+      case 0xe010196:
+        pcVar1 = "OID_DOT11_EXTSTA_CAPABILITY";
+        break;
+      case 0xe010197:
+        pcVar1 = "OID_DOT11_DATA_RATE_MAPPING_TABLE";
+        break;
+      case 0xe01019b:
+        pcVar1 = "OID_DOT11_IBSS_PARAMS";
+        break;
+      case 0xe01019d:
+        pcVar1 = "OID_DOT11_SAFE_MODE_ENABLED";
+        break;
+      case 0xe01019e:
+        pcVar1 = "OID_DOT11_HIDDEN_NETWORK_ENABLED";
+        break;
+      case 0xe01019f:
+        pcVar1 = "OID_DOT11_ASSOCIATION_PARAMS";
+      }
+      goto LAB_14003537f;
+    }
+    if (param_1 < 0xe050112) {
+      if (param_1 == 0xe050111) {
+        pcVar1 = "OID_DOT11_WFD_GET_DIALOG_TOKEN";
+        goto LAB_14003537f;
+      }
+      if (param_1 < 0xe050104) {
+        if (param_1 == 0xe050103) {
+          pcVar1 = "OID_DOT11_WFD_DEVICE_INFO";
+          goto LAB_14003537f;
+        }
+        if (param_1 < 0xe030107) {
+          if (param_1 == 0xe030106) {
+            pcVar1 = "OID_DOT11_INCOMING_ASSOCIATION_DECISION";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0xe020183) {
+            pcVar1 = "OID_DOT11_STATISTICS";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0xe030101) {
+            pcVar1 = "OID_DOT11_WPS_ENABLED";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0xe030102) {
+            pcVar1 = "OID_DOT11_START_AP_REQUEST";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0xe030103) {
+            pcVar1 = "OID_DOT11_AVAILABLE_CHANNEL_LIST";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0xe030104) {
+            pcVar1 = "OID_DOT11_AVAILABLE_FREQUENCY_LIST";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0xe030105) {
+            pcVar1 = "OID_DOT11_DISASSOCIATE_PEER_REQUEST";
+            goto LAB_14003537f;
+          }
+        }
+        else {
+          if (param_1 == 0xe030107) {
+            pcVar1 = "OID_DOT11_ADDITIONAL_IE";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0xe030108) {
+            pcVar1 = "OID_DOT11_ENUM_PEER_INFO";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0xe040101) {
+            pcVar1 = "OID_DOT11_CREATE_MAC";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0xe040102) {
+            pcVar1 = "OID_DOT11_DELETE_MAC";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0xe050101) {
+            pcVar1 = "OID_DOT11_WFD_DEVICE_CAPABILITY";
+            goto LAB_14003537f;
+          }
+          if (param_1 == 0xe050102) {
+            pcVar1 = "OID_DOT11_WFD_GROUP_OWNER_CAPABILITY";
+            goto LAB_14003537f;
+          }
+        }
+      }
+      else if (param_1 < 0xe05010b) {
+        if (param_1 == 0xe05010a) {
+          pcVar1 = "OID_DOT11_WFD_SEND_GO_NEGOTIATION_REQUEST";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xe050104) {
+          pcVar1 = "OID_DOT11_WFD_SECONDARY_DEVICE_TYPE_LIST";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xe050105) {
+          pcVar1 = "OID_DOT11_WFD_DISCOVER_REQUEST";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xe050106) {
+          pcVar1 = "OID_DOT11_WFD_ENUM_DEVICE_LIST";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xe050107) {
+          pcVar1 = "OID_DOT11_WFD_LISTEN_STATE_DISCOVERABILITY";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xe050108) {
+          pcVar1 = "OID_DOT11_WFD_ADDITIONAL_IE";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xe050109) {
+          pcVar1 = "OID_DOT11_WFD_FLUSH_DEVICE_LIST";
+          goto LAB_14003537f;
+        }
+      }
+      else {
+        if (param_1 == 0xe05010b) {
+          pcVar1 = "OID_DOT11_WFD_SEND_GO_NEGOTIATION_RESPONSE";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xe05010c) {
+          pcVar1 = "OID_DOT11_WFD_SEND_GO_NEGOTIATION_CONFIRMATION";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xe05010d) {
+          pcVar1 = "OID_DOT11_WFD_SEND_INVITATION_REQUEST";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xe05010e) {
+          pcVar1 = "OID_DOT11_WFD_SEND_INVITATION_RESPONSE";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xe05010f) {
+          pcVar1 = "OID_DOT11_WFD_SEND_PROVISION_DISCOVERY_REQUEST";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xe050110) {
+          pcVar1 = "OID_DOT11_WFD_SEND_PROVISION_DISCOVERY_RESPONSE";
+          goto LAB_14003537f;
+        }
+      }
+    }
+    else if (param_1 < 0xfd010103) {
+      if (param_1 == 0xfd010102) {
+        pcVar1 = "OID_PNP_QUERY_POWER";
+        goto LAB_14003537f;
+      }
+      if (param_1 < 0xe060106) {
+        if (param_1 == 0xe060105) {
+          pcVar1 = "OID_DOT11_WFD_DISCONNECT_FROM_GROUP_REQUEST";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xe050112) {
+          pcVar1 = "OID_DOT11_WFD_STOP_DISCOVERY";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xe050114) {
+          pcVar1 = "OID_DOT11_WFD_DEVICE_LISTEN_CHANNEL";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xe060101) {
+          pcVar1 = "OID_DOT11_WFD_DESIRED_GROUP_ID";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xe060102) {
+          pcVar1 = "OID_DOT11_WFD_START_GO_REQUEST";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xe060103) {
+          pcVar1 = "OID_DOT11_WFD_GROUP_START_PARAMETERS";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xe060104) {
+          pcVar1 = "OID_DOT11_WFD_CONNECT_TO_GROUP_REQUEST";
+          goto LAB_14003537f;
+        }
+      }
+      else {
+        if (param_1 == 0xe060106) {
+          pcVar1 = "OID_DOT11_WFD_GROUP_JOIN_PARAMETERS";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xe070101) {
+          pcVar1 = "OID_DOT11_POWER_MGMT_MODE_AUTO_ENABLED";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xe070102) {
+          pcVar1 = "OID_DOT11_POWER_MGMT_MODE_STATUS";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xe070103) {
+          pcVar1 = "OID_DOT11_OFFLOAD_NETWORK_LIST";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xfd010100) {
+          pcVar1 = "OID_PNP_CAPABILITIES";
+          goto LAB_14003537f;
+        }
+        if (param_1 == 0xfd010101) {
+          pcVar1 = "OID_PNP_SET_POWER";
+          goto LAB_14003537f;
+        }
+      }
+    }
+    else if (param_1 < 0xfd01010e) {
+      if (param_1 == 0xfd01010d) {
+        pcVar1 = "OID_PM_ADD_PROTOCOL_OFFLOAD";
+        goto LAB_14003537f;
+      }
+      if (param_1 == 0xfd010103) {
+        pcVar1 = "OID_PNP_ADD_WAKE_UP_PATTERN";
+        goto LAB_14003537f;
+      }
+      if (param_1 == 0xfd010104) {
+        pcVar1 = "OID_PNP_REMOVE_WAKE_UP_PATTERN";
+        goto LAB_14003537f;
+      }
+      if (param_1 == 0xfd010106) {
+        pcVar1 = "OID_PNP_ENABLE_WAKE_UP";
+        goto LAB_14003537f;
+      }
+      if (param_1 == 0xfd010109) {
+        pcVar1 = "OID_PM_PARAMETERS";
+        goto LAB_14003537f;
+      }
+      if (param_1 == 0xfd01010a) {
+        pcVar1 = "OID_PM_ADD_WOL_PATTERN";
+        goto LAB_14003537f;
+      }
+      if (param_1 == 0xfd01010b) {
+        pcVar1 = "OID_PM_REMOVE_WOL_PATTERN";
+        goto LAB_14003537f;
+      }
+    }
+    else {
+      if (param_1 == 0xfd01010e) {
+        pcVar1 = "OID_PM_GET_PROTOCOL_OFFLOAD";
+        goto LAB_14003537f;
+      }
+      if (param_1 == 0xfd01010f) {
+        pcVar1 = "OID_PM_REMOVE_PROTOCOL_OFFLOAD";
+        goto LAB_14003537f;
+      }
+      if (param_1 == 0xff0101cb) {
+        pcVar1 = "OID_RT_DEVICE_ID_INFO";
+        goto LAB_14003537f;
+      }
+      if (param_1 == 0xff010401) {
+        pcVar1 = "OID_RT_MOTOR_BT_802_11_PAL";
+        goto LAB_14003537f;
+      }
+      if (param_1 == 0xff818780) {
+        pcVar1 = "OID_RT_PRO8187_WI_POLL";
+        goto LAB_14003537f;
+      }
+    }
+  }
+switchD_14003459a_default:
+  pcVar1 = "UNKNOWN";
+LAB_14003537f:
+  if ((((undefined8 **)DAT_140292000 != &DAT_140292000) &&
+      (3 < *(byte *)((longlong)DAT_140292000 + 0x29))) &&
+     ((*(uint *)((longlong)DAT_140292000 + 0x2c) & 8) != 0)) {
+    FUN_140036234(DAT_140292000[3],0x2a,&DAT_140278e70,param_1,pcVar1);
+  }
+  return;
+}
+
+

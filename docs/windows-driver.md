@@ -73,3 +73,10 @@ per-station stats) is materially richer than anything the Windows driver
 exposes.** There is no Windows-only control we are missing for the
 functions this adapter performs; remaining unknowns are the
 `0xff8168xx` block and deeper WDI TLV internals.
+
+## Follow-up (2026-10-20): vendor 0xff81xxxx dispatch
+
+The 143-name table above covers the OIDs the driver pretty-prints; the **vendor
+switch** in `FUN_140019850` (31 cases: 9× 0xff8168xx + 22× 0xff8190xx) has no
+names — it is now mapped in `windows-vendor-oids.md` (case table, per-body
+disassembly, open questions), with full raw disassembly/pseudocode in `docs/raw/`.
