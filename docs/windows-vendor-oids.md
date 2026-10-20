@@ -72,6 +72,26 @@ an expected output size into `[R12]`, and calls a helper.
 the same shared body at 0x14001a975. Some 0xff8190xx values are taken by the
 first-stage switch (near the function entry) and jump into the bodies below.
 
+The shared body is a two-instruction stub:
+
+```asm
+0x14001a975: MOV R14D, 0x10001
+0x14001a97b: JMP 0x14001a9e8
+```
+
+and the common tail (reached by `JMP 0x14001a9e8` from most cases) is:
+
+```asm
+0x14001a9e8: MOV EAX, R14D          ; return value in EAX
+0x14001a9eb: MOV RCX, [RBP-8]; XOR RCX, RSP; CALL 0x140059560   ; canary check
+0x14001a9ff: ...epilogue... RET
+```
+
+i.e. those six OIDs return a constant `0x10001` in EAX without touching the
+buffers (likely a no-op/ack status — semantics unverified). Note that
+0xff819064's target 0x14001a97d sits after this stub (the f3/90xx check falls
+through to the stub only when 0xff819064 is not matched).
+
 ## Block bodies
 
 ### body @ 0x140019cb7  (OIDs: `0xff81684d`)
