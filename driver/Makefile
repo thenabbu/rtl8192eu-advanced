@@ -9,10 +9,6 @@ ccflags-y += -Wmissing-prototypes
 ccflags-y += -Werror=missing-prototypes
 ccflags-y += -Wno-error=date-time
 
-# Kernels built with CONFIG_WERROR (Ubuntu 24.04+) promote upstream code
-# warnings to errors; keep this out-of-tree module buildable everywhere.
-ccflags-y += -Wno-error
-
 ccflags-y += -Wno-unused-variable
 #ccflags-y += -Wno-unused-value
 #ccflags-y += -Wno-unused-label
@@ -357,6 +353,10 @@ ifeq ($(CONFIG_PCI_HCI), y)
 MODULE_NAME = 8192ee
 endif
 ccflags-y += -DCONFIG_RTL8192E
+
+# CONFIG_WERROR kernels (Ubuntu 24.04+ HWE) promote upstream code warnings
+# to errors; this out-of-tree module must build on both kinds of headers.
+ccflags-y += -Wno-error
 _HAL_INTFS_FILES += hal/HalPwrSeqCmd.o \
 					hal/$(RTL871X)/Hal8192EPwrSeq.o\
 					hal/$(RTL871X)/$(RTL871X)_xmit.o\
@@ -2149,10 +2149,6 @@ ccflags-y += -DCONFIG_WAKEUP_GPIO_INPUT_MODE
 ccflags-y += -DCONFIG_BT_WAKE_HST_OPEN_DRAIN
 endif
 ccflags-y += -Wno-error=date-time
-
-# Kernels built with CONFIG_WERROR (Ubuntu 24.04+) promote upstream code
-# warnings to errors; keep this out-of-tree module buildable everywhere.
-ccflags-y += -Wno-error
 # default setting for Android 7.0
 ifeq ($(RTK_ANDROID_VERSION), nougat)
 ccflags-y += -DRTW_P2P_GROUP_INTERFACE=1
@@ -2189,10 +2185,6 @@ ccflags-y += -DCONFIG_WAKEUP_GPIO_INPUT_MODE
 ccflags-y += -DCONFIG_BT_WAKE_HST_OPEN_DRAIN
 endif
 ccflags-y += -Wno-error=date-time
-
-# Kernels built with CONFIG_WERROR (Ubuntu 24.04+) promote upstream code
-# warnings to errors; keep this out-of-tree module buildable everywhere.
-ccflags-y += -Wno-error
 # default setting for Android 7.0
 ifeq ($(RTK_ANDROID_VERSION), nougat)
 ccflags-y += -DRTW_P2P_GROUP_INTERFACE=1
@@ -2296,10 +2288,6 @@ endif
 
 ifeq ($(CONFIG_PLATFORM_ZTE_ZX296716), y)
 ccflags-y += -Wno-error=date-time
-
-# Kernels built with CONFIG_WERROR (Ubuntu 24.04+) promote upstream code
-# warnings to errors; keep this out-of-tree module buildable everywhere.
-ccflags-y += -Wno-error
 ccflags-y += -DCONFIG_PLATFORM_ZTE_ZX296716
 ccflags-y += -DCONFIG_LITTLE_ENDIAN
 # default setting for Android
