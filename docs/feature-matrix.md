@@ -9,7 +9,7 @@
 | Mesh (802.11s) source | no | yes | yes | — |
 | FT / MBO / WNM / RRM / ROC | no | no | **yes** (new in 5.11) | — |
 | sw crypto (CCMP/GCMP internal) | no | no | yes | — |
-| procfs debug knobs | 156 | 482 | **588** | — |
+| procfs surface | 156 handlers (source) | 482 handlers (source) | **138 live entries** — 8 global + 128 device + odm/mcc subdirs, measured on the prod AP 2026-10-20 | — |
 | Kernel support | ≤ 3.10 | ≤ 6.x (community patches) | ≤ 7.0 (with mirror's compat fixes) | mainline cadence |
 | Bugs found here | — | PM-underflow on rmmod | PM-underflow (fixed, patch 0001) + monitor→AP WARN (fixed, patch 0002) | — |
 

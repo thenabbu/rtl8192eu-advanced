@@ -86,6 +86,7 @@ Every fix has A/B kernel-log proof in [`docs/bugs-found.md`](docs/bugs-found.md)
 
 | File | What it covers |
 |---|---|
+| [`docs/architecture-map.md`](docs/architecture-map.md) | source-level tree, init → data-path flow, procfs layout, patch index |
 | [`docs/usb-protocol.md`](docs/usb-protocol.md) | wire protocol, register map, init phases, firmware download |
 | [`docs/windows-vendor-oids.md`](docs/windows-vendor-oids.md) | the full Windows vendor OID surface — 53 OIDs, both handlers decoded |
 | [`docs/monitor-injection.md`](docs/monitor-injection.md) | injection failure chain + the usbmon truncation trap |
