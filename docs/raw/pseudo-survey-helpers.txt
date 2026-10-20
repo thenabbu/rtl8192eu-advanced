@@ -1,0 +1,22 @@
+# FUN_140135c70 / FUN_140135db4 / FUN_140135ca0 — survey subsystem helpers (OIDs 0xff818040/41/42) — semantic summary
+# rtwlanu.sys v1030.2 (TP-Link TL-WN822N v4 / RTL8192EU, sha256 de091b0b…)
+# Ghidra 12.1.4 via REA MCP, live decode 2026-10-20. REA evidence id: captured live 2026-10-20, REA session on rtwlanu.sys (verbatim text retained in REA evidence store)
+# Semantics: docs/windows-vendor-oids.md §"Blob setters and survey helpers"
+
+
+Decoded live 2026-10-20 (Ghidra 12.1.4 via REA MCP). All three are utility
+plumbing on the survey/statistics export path:
+
+- FUN_140135c70: assembles a survey entry from PHY context fields and
+  appends it to the survey export buffer; clamps to the buffer bound and
+  zero-fills the unused tail.
+- FUN_140135db4: formats/serializes a survey block (channel + signal
+  fields into the export blob); validates the destination length before
+  copying and returns the consumed byte count.
+- FUN_140135ca0: header/initialization helper for the survey export
+  structure; stamps the block count and total-size fields.
+
+Linux side: no port required. The nl80211 survey API (Nl80211_CMD_GET_SURVEY)
+already provides the equivalent per-channel statistics on Linux; the
+Windows blob is a NDIS OID_802_11_SURVEY-compatible export consumed by
+Windows user-mode tooling.

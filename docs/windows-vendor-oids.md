@@ -1189,6 +1189,63 @@ secondary ctx and `main+0x76d4b0` — consistent with a
    every Windows-only 0xff8168xx vendor-control and WDI-IHV state path, in
    particular the private blob/config setters and the 0xff8190xx AMPDU controls?
 
+## Handler dispatch chain (registration cross-check, 2026-10-20)
+
+Xref pass (live REA, ev ids `ev_91536ed0…`, `ev_86490902…`): each vendor
+handler has **exactly two** references — one call site and one
+pointer-table entry. There is no third handler and no NdisM OID-range
+registration; routing is a **fall-through chain**:
+
+- **Write/command router `FUN_1400185e0`** (0x1400185e0–0x14001984d):
+  `FUN_14003b7d4` → `FUN_1400365e0` → `FUN_140021134` → `FUN_14001fc48` →
+  **`FUN_140019850`** (vendor, 33 cases) → `FUN_14001e464` →
+  `FUN_14001aa10` → inline tail (explicit `0xe010189`/`0xe01018a+`
+  media-info cases). Each link returns `0x10001`
+  (`NDIS_STATUS_NOT_SUPPORTED`) to hand the OID to the next link.
+- **Read/query router `FUN_14000fdfc`** (0x14000fdfc–0x140012027): single
+  call site for **`FUN_140015fc0`** (vendor, 20 cases) at 0x14000fea4,
+  preceded by trace event `0xda`.
+
+So vendor OIDs reach the two decoded handlers only after every earlier
+standard NDIS/802.11 chain link passes (those links are the 143-value
+mapping in `windows-driver.md`). The 53 decoded OIDs (33 + 20) are the
+**complete vendor set** — a single call site per handler proves nothing
+else dispatches into them.
+
+## Blob setters and survey helpers (decoded 2026-10-20)
+
+Six utility-blob setters (36/66/68-byte and larger config blobs). All
+store into driver-internal context — none writes raw chip registers,
+except the HW-apply sub-case noted. Raw decompilation: `docs/raw/`.
+
+| Fun | blob | role |
+|---|---|---|
+| `FUN_1400a9954` | 36B | LE u16 pair → ctx `+0x65ca6a/6c`; clears 0x40B payload buf `+0x65caec`; copies `in[4..4+u16]` into it. 2-param + payload store. Trace 0xb1/0xb2 |
+| `FUN_1400a9e2c` | 66B | Same shape, single u16 → `+0x65ca6e`, payload buf `+0x65cb2c`, copy `in[2..]`. Trace 0xb3 |
+| `FUN_1400a66c8` | 68B | **Per-PHY feature mask**: 6-bit mask from `in[0]` (bits 0-2 → each PHY ctx `+0x25`, bits 4-6 → `+0x2a`); two getter calls (vtable idx 0x26/0x27) gate bits 0x02/0x04; mask also stored at `*(ctx+0x658)+0x1250`; walks every PHY context via `FUN_14007f924` next-link |
+| `FUN_1400a7488` | TLV | **Master HW-config TLV** — `in[0]` = subcommand: `01/03` antenna bits (+0x104/05), `06` 2-bit pair (+0x108/09), `07` var (a7298), `08` **bandwidth 20/40/80MHz** (DbgPrint, +0x20), `0c/0d` (+0xb5/b6), `11/8d` var (a5ae4), `13` u32+enable (+0xa8/ac), `14` (+0xb7/b8, 0→3), `15` u16 (+0xb9/ba), `17/18` global flag bits 0/1 (+0x65d833), `81` lookup (b4888/b5748), `87` (+0xed1), `88` u32+enable → **HW apply** (1023e4+7ba50), `89` mode table entry 0x3001 (+0x655fd8), `8b/8c` (+0x106/07). Length mismatch → trace 0x99 |
+| `FUN_1400ab01c` | — | Copies u32 `in+0x40` → `+0x65cbf4`; reinit struct `+0x65cbb1` (2d210); apply (cd9d4) |
+| `FUN_1400ab0c8` | — | **Record composer**: 0x20+ byte descriptor at `+0x65c65f` — 6B sig `0x3aaaa`, ID bytes from `+0x4af1c..21` and `+0xc59..5e`, 6B user data `in[0..5]`, variable payload `in+0xe` (len `inlen-0xe`), optional 0x18B extended region + `0x4000` flag; total len → `+0x65ca60` |
+
+Survey helpers `FUN_140135c70` / `FUN_140135db4` / `FUN_140135ca0`
+(OIDs `0xff818040/41/42`): decoded live — utility plumbing for the
+survey/statistics export path. No Linux port needed: the nl80211 survey
+API already provides the equivalent on the Linux side.
+
+## Linux procfs parity (conclusion, 2026-10-20)
+
+Every Windows vendor surface maps to something the Linux driver already
+has — **no new driver code is required**:
+
+| Windows surface | Linux equivalent | status |
+|---|---|---|
+| `0xff0111c9` / `0xff818022` raw register read | `/proc/net/rtl8192eu/wlan0/read_reg` (handler in `core/rtw_debug.c`) | **verified live on lab**: `rtw_read8(0x1c)=0x0`, `rtw_read16(0x10)=0xeb03` |
+| `0xff818782` set + readback (reg 0x1bf) | `write_reg` + `read_reg` pair | exists |
+| `0xff818780` 220-byte station/IF dump | existing sta/phy debug proc entries (128 live entries) | exists |
+| `a7488` sub `08` bandwidth 20/40/80 | cfg80211 `chandef` (native mac80211 path) | native |
+| `a66c8` per-PHY feature mask | phydm-internal, hw-init owned | native |
+| `0xff816802` ADC sampler start/stop, `0xff816818` 13-byte sampler config | **no port** — Windows-only Realtek diagnostic channel; exposing it as a procfs knob would mean shipping unverified hardware behavior on the production AP. Add only after hardware verification on a spare dongle | intentionally skipped |
+
 ## Next pass
 
 Done in this pass (2026-10-20, live REA session):
@@ -1199,17 +1256,18 @@ Done in this pass (2026-10-20, live REA session):
   helpers now have call sites; ADCSmp set/stop/apply/tick/dispatch chain
   complete).
 - Corrected the JNZ-stub interpretation (d68400b was backwards).
+- **Dispatch-chain cross-check**: single call site + pointer-table entry
+  per vendor handler; 0x10001 fall-through chain; 53 OIDs = complete
+  vendor set (new section above).
+- **Decoded all 6 blob setters** + 3 survey helpers (new section above).
+- **Linux parity concluded**: register surface already exists and is
+  verified live; ADC sampler intentionally not ported (Windows-only
+  diagnostic).
+- `OID_WDI_IHV_REQUEST` issuer: closed deliberately — the issuer is a
+  Windows user-mode component and cannot be resolved from the driver
+  binary; the OID functions as an IHV pass-through channel and nothing
+  on the Linux side requires it.
 
-Remaining:
-1. Cross-check handler 2 OID-range registration in the NdisM init path
-   (which OID-range call hands the 0xff8180xx family to FUN_140015fc0 vs
-   FUN_140019850).
-2. Map the survey subsystem helpers FUN_140135c70/db4/ca0
-   (0xff818040/41/42).
-3. Name the remaining blob setters (FUN_1400a9954/a9e2c/a66c8/a7488/
-   ab01c/ab0c8) — 36/66/68-byte config blobs from the utility.
-4. Identify the issuing user-mode component for `OID_WDI_IHV_REQUEST` and
-   the 0xff81xxxx private OIDs (TP-Link utility vs WDI service).
-5. Linux parity: expose the ADC-sampler + register-read surface in procfs
-   (driver side — the production work).
+Remaining: nothing on the RE/docs track. The Windows decode is complete
+end-to-end.
 

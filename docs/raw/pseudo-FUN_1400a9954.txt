@@ -1,0 +1,25 @@
+# FUN_1400a9954 — blob setter: 2-param + payload store (36B blob)
+# rtwlanu.sys v1030.2 (TP-Link TL-WN822N v4 / RTL8192EU, sha256 de091b0b…)
+# Ghidra 12.1.4 via REA MCP, live decode 2026-10-20. REA evidence id: ev_609340481e810fc769e9092ae8ed6d0f44862ceb6d405f672669b4ebdcd7c490
+# Semantics: docs/windows-vendor-oids.md §"Blob setters and survey helpers"
+
+
+void FUN_1400a9954(longlong param_1,byte *param_2)
+{
+  *(ushort *)(param_1 + 0x65ca6a) = (ushort)param_2[1] * 0x100 + (ushort)*param_2;
+  *(ushort *)(param_1 + 0x65ca6c) = (ushort)param_2[3] * 0x100 + (ushort)param_2[2];
+  FUN_14002ded4(param_1 + 0x65caec,0x40);
+  FUN_14002d210(param_1 + 0x65caec,param_2 + 4,*(undefined2 *)(param_1 + 0x65ca6c));
+  if ((undefined8 **)DAT_140292000 != &DAT_140292000) {
+    if ((3 < *(byte *)((longlong)DAT_140292000 + 0x69)) &&
+       ((*(uint *)((longlong)DAT_140292000 + 0x6c) & 0x400) != 0)) {
+      FUN_14000c990(DAT_140292000[0xb],0xb1,&DAT_14027ced0,*(undefined2 *)(param_1 + 0x65ca6a));
+    }
+    if ((((undefined8 **)DAT_140292000 != &DAT_140292000) &&
+        (3 < *(byte *)((longlong)DAT_140292000 + 0x69))) &&
+       ((*(uint *)((longlong)DAT_140292000 + 0x6c) & 0x400) != 0)) {
+      FUN_14000c990(DAT_140292000[0xb],0xb2,&DAT_14027ced0,*(undefined2 *)(param_1 + 0x65ca6c));
+    }
+  }
+  return;
+}

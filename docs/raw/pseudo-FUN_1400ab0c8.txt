@@ -1,0 +1,36 @@
+# FUN_1400ab0c8 — blob setter: internal record composer
+# rtwlanu.sys v1030.2 (TP-Link TL-WN822N v4 / RTL8192EU, sha256 de091b0b…)
+# Ghidra 12.1.4 via REA MCP, live decode 2026-10-20. REA evidence id: ev_f7b0cdab83704c31a1d9288446e38226c0702b0002d528843290700861b2249c
+# Semantics: docs/windows-vendor-oids.md §"Blob setters and survey helpers"
+
+
+void FUN_1400ab0c8(longlong param_1,byte *param_2,undefined4 param_3)
+{
+  *(uint *)(param_1 + 0x65ca60) = param_3 + 0x20;
+  if (*(int *)(param_1 + 0x5fec38) != 0) {
+    *(uint *)(param_1 + 0x65ca60) = param_3 + 0x38;
+    *(int *)(param_1 + 0x65ca64) = 0x4000;
+  }
+  FUN_14002d210(param_1 + 0x65c65f);
+  *(uint *)(param_1 + 0x65c66f) = 0x3aaaa;
+  *(undefined2 *)(param_1 + 0x65c675) = *(undefined2 *)(param_1 + 0x4af20);
+  *(undefined1 *)(param_1 + 0x65c66b) = *(undefined1 *)(param_1 + 0x4af1c);
+  *(undefined1 *)(param_1 + 0x65c66c) = *(undefined1 *)(param_1 + 0x4af1d);
+  *(undefined1 *)(param_1 + 0x65c66d) = *(undefined1 *)(param_1 + 0x4af1e);
+  *(undefined1 *)(param_1 + 0x65c66e) = *(undefined1 *)(param_1 + 0x4af1f);
+  *(undefined2 *)(param_1 + 0x65c677) = *(undefined2 *)(param_1 + 0xc59);
+  *(undefined1 *)(param_1 + 0x65c673) = *(undefined1 *)(param_1 + 0xc55);
+  *(undefined1 *)(param_1 + 0x65c674) = *(undefined1 *)(param_1 + 0xc56);
+  *(undefined1 *)(param_1 + 0x65c675) = *(undefined1 *)(param_1 + 0xc57);
+  *(undefined1 *)(param_1 + 0x65c676) = *(undefined1 *)(param_1 + 0xc58);
+  *(undefined1 *)(param_1 + 0x65c67a) = *(undefined1 *)(param_2 + 4);
+  *(undefined1 *)(param_1 + 0x65c679) = *(undefined1 *)(param_2 + 5);
+  *(undefined1 *)(param_1 + 0x65c678) = *(undefined1 *)(param_2 + 6);
+  *(undefined1 *)(param_1 + 0x65c67b) = *param_2;
+  *(undefined1 *)(param_1 + 0x65c67c) = param_2[1];
+  *(undefined1 *)(param_1 + 0x65c67d) = param_2[2];
+  *(undefined1 *)(param_1 + 0x65c67e) = param_2[3];
+  *(uint *)(param_1 + 0x65c684) = param_3 - 0xe;
+  FUN_14002d210(param_1 + 0x65c688,param_2 + 0xe,param_3 - 0xe);
+  return;
+}
