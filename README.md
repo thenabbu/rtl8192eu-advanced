@@ -1,72 +1,99 @@
 # rtl8192eu-advanced
 
-A production-grade Linux driver for the **TP-Link TL-WN822N v4** USB WiFi
-adapter (Realtek **RTL8192EU**, USB `2357:0108`) — and for any other
-RTL8192EU-based adapter.
+Linux driver for the **TP-Link TL-WN822N v4** (Realtek **RTL8192EU**, USB `2357:0108`) — and any other RTL8192EU adapter.
 
-Base: **Realtek's newest official release (v5.11.2.1, 2021)** — newer than
-TP-Link's own Linux driver (v4.3.15, 2015) and the widely-used community
-mirror (Mange, v5.6.4-era) — plus original fixes and features, all
-reverse-engineered and wire-verified on live hardware.
+Built on Realtek's official **v5.11.2.1** base (newer than TP-Link's own 2015 driver and the Mange community mirror), with the known bugs fixed and reverse-engineered control added on top. Running in production as a hostapd AP.
 
-**Every fix below exists in both the official AND community builds today.**
+## Architecture
 
-| Commit / patch | What it changes |
-|---|---|
-| autopm hold guard | `Runtime PM usage count underflow!` on every `rmmod` — probe's PM get fails on modern kernels, driver still put an unheld reference at remove. Fixed + dyndbg probes |
-| MLME monitor no-op | `rtw_warn_on(1)` stack dump on every monitor→AP transition — Realtek added `MLME_IS_MONITOR` but forgot the branch |
-| `CONFIG_WIFI_MONITOR=y` | monitor mode — official stock ships it compiled out |
-| TX power offset wired | the `tx_power_offset` proc knob (0–5 dBm) was set+printed but **never consumed** — now wired into the TX power target |
-| `CONFIG_MONITOR_MODE_XMIT` | TX injection was impossible: carrier never comes up in monitor mode (Realtek's own fix ships commented out) + a hostile `rtap_len == 12` check. Now: monitor RX **and** wire-verified TX injection |
-| debug probes | dyndbg-gated `pr_debug` breadcrumbs across the whole monitor TX flow (stock ships every diagnostic compiled out) |
+```mermaid
+flowchart LR
+    RF["RTL8192EU<br/>RF + baseband"]
+    subgraph KO["8192eu.ko"]
+        direction TB
+        USB["USB transport<br/>usb_intf.c"]
+        IO["register I/O<br/>rtw_io.c"]
+        MLME["state machine<br/>rtw_mlme_ext.c"]
+        MODES["modes<br/>AP · station · monitor"]
+        PHY["PHY / RF tuning<br/>rtw_odm.c"]
+        PATH["data path<br/>xmit.c / recv.c"]
+        CFG["cfg80211 glue<br/>os_dep/linux/"]
+        PROC["procfs control surface<br/>rtw_proc.c (128 knobs)"]
+        USB --> IO
+        IO <--> MLME
+        MLME --> MODES
+        MODES --> PATH --> CFG
+        IO <--> PHY
+        IO -.->|read_reg / write_reg| PROC
+    end
+    USR["userspace<br/>hostapd · iw · tools/"]
+    RF <-->|USB 2.0| USB
+    CFG <--> USR
+    PROC -.-> USR
+```
 
-## Build from a clone
+- `driver/core/` — vendor core: state machine, modes, PHY tuning, data path, procfs
+- `driver/os_dep/linux/` — USB transport + cfg80211 glue
+- `tools/` — LED control, monitor injection test, usbmon parser
+- `docs/` — the reverse-engineering results (wire protocol, register map, Windows OID surface)
+
+## Install
 
 ```bash
 git clone https://github.com/thenabbu/rtl8192eu-advanced.git
 cd rtl8192eu-advanced/driver
-make KVER=$(uname -r) -j$(nproc)
-sudo insmod 8192eu.ko rtw_power_mgnt=0 rtw_enusbss=0   # AP duty: keep both = 0
+sudo -S -p '' ./install_wifi.sh
 ```
 
-### DKMS (survives kernel upgrades)
+Manual build / DKMS / per-distro packages: [`driver/README.md`](driver/README.md).
+
+For AP duty, load with power management off:
 
 ```bash
-sudo cp -a driver /usr/src/rtl8192eu-1.0
-sudo dkms add rtl8192eu/1.0
-sudo dkms install rtl8192eu/1.0 -k $(uname -r)
+sudo -S -p '' modprobe 8192eu rtw_power_mgnt=0 rtw_enusbss=0
 ```
 
-Module name stays `8192eu`, so existing `modprobe.d` options and udev
-rules keep working. CI builds the tree on Ubuntu 22.04 (5.15) and
-24.04 (6.8) on every push.
+Module name stays `8192eu`, so existing `modprobe.d` options and udev rules keep working. CI builds on Ubuntu 22.04 (5.15) and 24.04 (6.8) on every push.
 
-## Verified on live hardware (2026-10-19)
+## Fixed over the official and community builds
 
-- AP duty (hostapd): clients re-associate ~9 s after module bounce,
-  zero kernel warnings across a full day
-- monitor RX: 838 802.11 frames in 8 s (`captures/monitor.pcap`)
-- monitor TX: 10/10 injected frames = 72-byte bulk-OUT URBs with
-  completion status 0
-- TX power: offset 0/1/4 → CCK 16/17/20 dBm, exact restore
-- LED: full on/off/blink control (`tools/rtlled.sh`)
-- A/B kernel-log proof for every bugfix (old module still warns,
-  patched one silent, same log)
+| Bug | Fix |
+|---|---|
+| `Runtime PM usage count underflow!` on every `rmmod` | PM hold guard |
+| Kernel stack dump on every monitor → AP switch | missing `MLME_IS_MONITOR` branch |
+| Monitor mode compiled out of stock | `CONFIG_WIFI_MONITOR=y` |
+| `tx_power_offset` knob set but never read | wired into the TX power target |
+| TX injection impossible in monitor mode | carrier fix + radiotap check |
+| dmesg flooded with PHYDM printks | dynamic debug — quiet by default |
+| build breaks on Ubuntu 24.04 HWE kernels | dual-ABI `set_monitor_channel` guard |
 
-## Hardware control surface
+Every fix has A/B kernel-log proof in [`docs/bugs-found.md`](docs/bugs-found.md).
 
-- `docs/txpower-control.md` — the TX power formula and every knob
-- `docs/led-control.md` — LED registers (`REG_LEDCFG0/1/2`), semantics
-- `docs/usb-protocol.md` — the complete wire protocol (vendor request,
-  register map, init phases, firmware download)
-- `docs/monitor-injection.md` — the injection failure chain + the usbmon
-  32-byte TX truncation trap
-- `docs/windows-driver.md` — what the official Windows driver exposes
-  (OID surface incl. vendor `OID_RT_*` commands)
-- `tools/` — LED control, injection test, usbmon parser
+## Verified on live hardware
 
-## Provenance
+- **AP:** clients re-associate ~9 s after a module bounce, zero warnings in a full day
+- **Monitor RX:** 838 frames in 8 s · **Monitor TX:** 10/10 injected frames on the wire
+- **TX power:** offset 0/1/4 → 16/17/20 dBm, exact restore
+- **LED:** full on/off/blink control via `tools/rtlled.sh`
 
-Base tree imported verbatim from the official 5.11.2.1 mirror
-(see `MANIFEST.md` for hashes); our series is the commit history on top.
-GPL-2.0 — see `LICENSE`.
+## Control surface
+
+- 128 procfs knobs — incl. raw register `read_reg` / `write_reg`, TX power offset (0–5 dBm), LED state
+- Monitor mode RX + injection (`tools/inject_test.py`)
+- USB-level trace tooling (`tools/usbmon_parse.py` + captures in `captures/`)
+
+## Docs
+
+| File | What it covers |
+|---|---|
+| [`docs/usb-protocol.md`](docs/usb-protocol.md) | wire protocol, register map, init phases, firmware download |
+| [`docs/windows-vendor-oids.md`](docs/windows-vendor-oids.md) | the full Windows vendor OID surface — 53 OIDs, both handlers decoded |
+| [`docs/monitor-injection.md`](docs/monitor-injection.md) | injection failure chain + the usbmon truncation trap |
+| [`docs/txpower-control.md`](docs/txpower-control.md) | TX power formula and every knob |
+| [`docs/led-control.md`](docs/led-control.md) | LED registers and semantics |
+| [`docs/feature-matrix.md`](docs/feature-matrix.md) | official vs community vs this driver |
+| [`docs/bugs-found.md`](docs/bugs-found.md) | every bug, with before/after log proof |
+
+---
+
+Base tree imported verbatim from the official 5.11.2.1 mirror (hashes in `MANIFEST.md`); this series is the commit history on top. GPL-2.0.

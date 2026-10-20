@@ -1,101 +1,72 @@
-## rtl8192eu-linux
-Realtek rtl8192eu official Linux driver v5.11.2.1
+# 8192eu — install guide
 
-This driver is based on the official and manufacturer supported Realtek v5.11.2.1 driver with fixes and improvements to support the latest kernels (>=5, up to 7.0).
+Builds on kernels 5.x → 7.0 (CI-verified on Ubuntu 22.04 / 5.15 and 24.04 / 6.8).
 
-### Before installing
+**Monitor mode** is enabled in this tree (`CONFIG_WIFI_MONITOR = y`).
 
-If you're using a different architecture than x86, please set (MakeFile) ```CONFIG_PLATFORM_I386_PC = n``` and also set your architecture (for example ```CONFIG_PLATFORM_ARM_RPI = y``` for 32-bit ARM, or ```CONFIG_PLATFORM_ARM_AARCH64 = y``` for 64-bit ARM).
+## Prerequisites
 
-Monitor mode can be enabled by setting ```CONFIG_WIFI_MONITOR = y```.
-
-Also, make sure you have headers, build, dkms and git packages installed. 
-
-##### Debian, Ubuntu, Mint:
-
-```sudo apt install linux-headers-generic build-essential dkms git```
-
-##### Fedora:
-
-```sudo dnf groupinstall "C Development Tools and Libraries"  & sudo dnf install dkms git```
-
-##### RHEL, CentOS:
-
-```sudo yum groupinstall "Development Tools" && sudo yum install dkms git```
-
-##### Arch Linux, Manjaro:
-
-```sudo pacman -S base-devel dkms git```
-
-##### openSUSE:
-
-```sudo zypper install -t pattern devel_C_C++ && sudo zypper install dkms git```
-
-##### Raspberry Pi:
-
-```sudo apt-get install git raspberrypi-kernel-headers build-essential dkms git```
-
-Also set `CONFIG_PLATFORM_I386_PC = n` and `CONFIG_PLATFORM_ARM_RPI = y` in the `Makefile`.
-
-### Automated (re)install 
-
-Run from driver directory:
-```
-./install_wifi.sh
+```bash
+# Debian / Ubuntu / Mint
+sudo -S -p '' apt install linux-headers-generic build-essential dkms git
+# Fedora
+sudo -S -p '' dnf groupinstall "C Development Tools and Libraries" && sudo -S -p '' dnf install dkms git
+# RHEL / CentOS
+sudo -S -p '' yum groupinstall "Development Tools" && sudo -S -p '' yum install dkms git
+# Arch / Manjaro
+sudo -S -p '' pacman -S base-devel dkms git
+# openSUSE
+sudo -S -p '' zypper install -t pattern devel_C_C++ && zypper install dkms git
 ```
 
-### Automated uninstall/reset
+Non-x86: set `CONFIG_PLATFORM_I386_PC = n` and your platform in the `Makefile` (e.g. `CONFIG_PLATFORM_ARM_RPI = y` for 32-bit ARM, `CONFIG_PLATFORM_ARM_AARCH64 = y` for 64-bit).
 
-Run from driver directory:
-```
-./uninstall_wifi.sh
-```
+## Quick install
 
-### Manual install
-
-Remove available drivers with (skip if `sudo lshw -C network` and `dkms status` do not show any wifi drivers):
-
-```
-sudo rmmod 8192eu
-sudo rmmod rtl8xxxu
-sudo dkms remove -m rtl8192eu -v 1.0
+```bash
+sudo -S -p '' ./install_wifi.sh          # add + install via DKMS
+sudo -S -p '' ./uninstall_wifi.sh        # remove
 ```
 
-Blacklist default driver (rtl8xxxu on Ubuntu):
+## Manual install
 
-```
-echo "blacklist rtl8xxxu" >> ./blacklist-rtl8xxxu.conf
-sudo mv ./blacklist-rtl8xxxu.conf /etc/modprobe.d/
-```
+```bash
+# remove any existing 8192eu / competing driver
+sudo -S -p '' rmmod 8192eu
+sudo -S -p '' rmmod rtl8xxxu
+sudo -S -p '' dkms remove -m rtl8192eu -v 1.0
 
-Run add and install commands from driver directory:
+# blacklist the in-tree fallback (rtl8xxxu on Ubuntu)
+echo "blacklist rtl8xxxu" | sudo -S -p '' tee /etc/modprobe.d/blacklist-rtl8xxxu.conf
 
-```
-sudo cp -ar . /usr/src/rtl8192eu-1.0
-sudo dkms add -m rtl8192eu -v 1.0
-sudo dkms install -m rtl8192eu -v 1.0
-```
-
-Load driver (or reboot):
-```
-sudo modprobe 8192eu
+# build + install
+sudo -S -p '' cp -ar . /usr/src/rtl8192eu-1.0
+sudo -S -p '' dkms add -m rtl8192eu -v 1.0
+sudo -S -p '' dkms install -m rtl8192eu -v 1.0
+sudo -S -p '' modprobe 8192eu
 ```
 
-### After installing (secure boot)
+For AP duty, keep power management off:
 
-If secure boot (deployed mode) is enabled, you must enroll the public key mentioned during the install process once. This may require installing additional packages like mokutil keyutils and openssl. You can temporarily switch to audit mode (bios) and use the driver normally.
-
-To enroll use:
+```bash
+sudo -S -p '' modprobe 8192eu rtw_power_mgnt=0 rtw_enusbss=0
 ```
-sudo mokutil --import [public_key]
+
+## Secure Boot
+
+With Secure Boot in deployed mode, enroll the MOK key shown during install once:
+
+```bash
+sudo -S -p '' mokutil --import [public_key]   # then reboot and confirm
 ```
-After reboot, you can enroll the key.
 
-### Troubleshooting
+(Or switch to BIOS audit mode to use it without enrolling.)
 
-If you open an issue because the driver is not working, please post:
+## Troubleshooting
 
-1. kernel version & distribution name/version
-2. output of `make.log` file if it does not compile
-3. output of `lsusb`  and `lsmod | grep 8192eu` commands if it does compile but does not work
-4. (limited) output of `sudo dmesg | grep -i 8192eu` command
+Before opening an issue, post:
+
+1. kernel version + distro name/version
+2. tail of `make.log` if it doesn't compile
+3. `lsusb` and `lsmod | grep 8192eu` if it compiles but doesn't work
+4. `sudo dmesg | grep -i 8192eu` (limited)
