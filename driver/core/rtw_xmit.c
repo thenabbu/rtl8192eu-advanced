@@ -4743,7 +4743,7 @@ s32 rtw_monitor_xmit_entry(struct sk_buff *skb, struct net_device *ndev)
 	 * scapy defaults). Accept any well-formed radiotap header. */
 	if (rtap_len < sizeof(struct ieee80211_radiotap_header)
 	    || rtap_len > skb->len) {
-		pr_debug("8192eu: monitor xmit bad radiotap len %d (skb %d)\n",
+		netdev_dbg(padapter->pnetdev, "8192eu: monitor xmit bad radiotap len %d (skb %d)\n",
 			 rtap_len, (int)skb->len);
 		goto fail;
 	}
@@ -4786,7 +4786,7 @@ s32 rtw_monitor_xmit_entry(struct sk_buff *skb, struct net_device *ndev)
 	pmlmeext->mgnt_seq++;
 	pattrib->last_txcmdsz = pattrib->pktlen;
 
-	pr_debug("8192eu: monitor xmit dumping len=%d rate=%u qsel=%u\n",
+	netdev_dbg(padapter->pnetdev, "8192eu: monitor xmit dumping len=%d rate=%u qsel=%u\n",
 		 pattrib->pktlen, pattrib->rate, pattrib->qsel);
 	dump_mgntframe(padapter, pmgntframe);
 

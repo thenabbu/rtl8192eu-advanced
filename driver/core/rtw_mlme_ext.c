@@ -7501,7 +7501,7 @@ void update_mgntframe_attrib_addr(_adapter *padapter, struct xmit_frame *pmgntfr
 void dump_mgntframe(_adapter *padapter, struct xmit_frame *pmgntframe)
 {
 	if (RTW_CANNOT_RUN(padapter)) {
-		pr_debug("8192eu: dump_mgntframe gate: surprise=%d stopped=%d\n",
+		netdev_dbg(padapter->pnetdev, "8192eu: dump_mgntframe gate: surprise=%d stopped=%d\n",
 			 rtw_is_surprise_removed(padapter), rtw_is_drv_stopped(padapter));
 		rtw_free_xmitbuf(&padapter->xmitpriv, pmgntframe->pxmitbuf);
 		rtw_free_xmitframe(&padapter->xmitpriv, pmgntframe);
