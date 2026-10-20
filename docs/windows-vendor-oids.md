@@ -14,6 +14,10 @@ Vendor OID dispatch in the official TP-Link Windows driver for the TL-WN822N v4
   `/opt/data/cache/delegation/live/deleg_c96e46f4/task-1.log`.
 - Raw evidence: `raw/disasm-FUN_140019850.txt`, `raw/disasm-FUN_140015fc0.txt`,
   `raw/pseudo-FUN_140019850.txt` (plus spill IDs cited per section).
+  Handler-2 pseudocode (FUN_140015fc0) captured live via REA MCP on
+  2026-10-20 (REA evidence id `ev_3866b99078f9a677`); table-helper
+  pseudocode preserved in `raw/pseudo-FUN_1401294e4.txt` /
+  `raw/pseudo-FUN_140129ce8.txt`.
 
 ## Dispatcher
 
@@ -32,65 +36,97 @@ case bodies (inferences marked as such):
 Each case typically checks the input length, reads the input via `RSI`, writes
 an expected output size into `[R12]`, and calls a helper.
 
-## Case table (31 observed)
+## Case table — handler 1 (FUN_140019850), decoded
 
-| OID value | branch | body entry | body instrs (to next body) |
-|---|---|---|---|
-| `0xff81684d` | JZ | `0x140019cb7` | 88 |
-| `0xff8168f1` | JZ | `0x140019c08` | 44 |
-| `0xff8168f2` | JZ | `0x140019bb6` | 19 |
-| `0xff8168f3` | JNZ | `0x14001a975` | 2 |
-| `0xff8168f5` | JZ | `0x14001a04f` | 155 |
-| `0xff8168fc` | JZ | `0x140019f91` | 37 |
-| `0xff8168fd` | JZ | `0x140019f02` | 34 |
-| `0xff8168fe` | JZ | `0x140019e4f` | 39 |
-| `0xff819000` | JNZ | `0x14001a975` | 2 |
-| `0xff819003` | JZ | `0x14001a3b3` | 38 |
-| `0xff819006` | JZ | `0x14001a398` | 7 |
-| `0xff819007` | JZ | `0x14001a2c4` | 57 |
-| `0xff81900c` | JNZ | `0x14001a975` | 2 |
-| `0xff819011` | JZ | `0x14001a522` | 71 |
-| `0xff819020` | JZ | `0x14001a4ab` | 31 |
-| `0xff819023` | JZ | `0x14001a48a` | 6 |
-| `0xff819024` | JZ | `0x14001a46f` | 6 |
-| `0xff819025` | JNZ | `0x14001a975` | 2 |
-| `0xff819036` | JZ | `0x14001a78f` | 39 |
-| `0xff81903d` | JZ | `0x14001a6fd` | 37 |
-| `0xff81903e` | JZ | `0x14001a674` | 35 |
-| `0xff81903f` | JNZ | `0x14001a975` | 2 |
-| `0xff819044` | JZ | `0x14001a8f7` | 29 |
-| `0xff819045` | JZ | `0x14001a87d` | 32 |
-| `0xff81904a` | JZ | `0x14001a86a` | 5 |
-| `0xff81904b` | JZ | `0x14001a84c` | 5 |
-| `0xff81904c` | JNZ | `0x14001a975` | 2 |
-| `0xff819054` | JZ | `0x14001a9d8` | 18 |
-| `0xff819056` | JZ | `0x14001a9cb` | 4 |
-| `0xff819057` | JZ | `0x14001a9b8` | 5 |
-| `0xff819064` | JZ | `0x14001a97d` | 16 |
+33 cases total (the fan-out run captured 31; the xref pass recovered
+`0xff816802` and `0xff816818`, which sit in the first-stage switch).
 
-0xff8168f3 and 0xff819000/0xff81900c/0xff819025/0xff81903f/0xff81904c all enter
-the same shared body at 0x14001a975. Some 0xff8190xx values are taken by the
-first-stage switch (near the function entry) and jump into the bodies below.
+| OID | body entry | decoded semantics |
+|---|---|---|
+| `0xff816802` | `0x14001991e` | **ADC sampler start/stop**: `[main+0x762648]=in[0]`, `[0x65cb71]=0`, call `adc_smp_set(main_ctx, 0, 0)` (FUN_140130190) |
+| `0xff816808` | `0x14001a2d9` | store `in[0]` → `[0x4d0f98]` (flag) |
+| `0xff816818` | `0x1400199e6` | **ADC sampler config apply**: needs 13 B; stores 10 B `{u16,u16,u32,u8,u8}` → `[sec+0x38..41]` + `[main+0x76d4b0..b9]`; `[per-if(0x1c0)+0x25]=1`; `sampler_cfg_apply` (FUN_14012f2c4); on fail → `sampler_if_tick` (FUN_14012f32c) |
+| `0xff81684d` | `0x140019cb7` | **blob setter (2 sizes)**: 36 B → FUN_1400ab0c8, 68 B → FUN_1400a9954 |
+| `0xff8168f1` | `0x140019c08` | **toggle**: in=0 → `hal_write_trigger(0x18f)` (+`0x190` if trace bit 0x8); in=1 → `hal_write_trigger(0x191)`; `[0x65ca65]=in`, `[0x65cb70]=in?1:0` |
+| `0xff8168f2` | `0x140019bb6` | needs 18 B, `in[0]==0`; `sampler_mode_dispatch(mode=0)` (FUN_14012dbd8); success flag in R13B |
+| `0xff8168f3` | `0x14001a975` | **true no-op** → `0x10001` |
+| `0xff8168f5` | `0x14001a04f` | **blob setter**: needs 66 B → FUN_1400a9e2c |
+| `0xff8168fc` | `0x140019f91` | **toggle**: in==1 → `[0x65c616]=1` + gated `hal_write_trigger(0x198)`; else `[0x65c616]=0` + gated `0x199` |
+| `0xff8168fd` | `0x140019f02` | `hal_write_trigger(0x18d)`; needs 68 B → FUN_1400ab01c (blob setter) |
+| `0xff8168fe` | `0x140019e4f` | **toggle**: in==1 → `[0x65cb70]=1` + gated `0x19b`; else `[0x65cb70]=0` + gated `0x19c` |
+| `0xff819000` | `0x140019dab` | `[sec+0xb8]=in[0]`; if in[0]==1: in[1]≤0x77 required, `[sec+0xbc]=in[1]&7`, `[sec+0xbd]=(in[1]>>4)&7` (mirrored to second sec-ctx if present) |
+| `0xff819001` | `0x14001a0a1` | **mode/channel config**: `[sec+0xc0]=in[0]` (0..3); 1..3: in[1]=band 0..6, in[2..3]=u16 channel (band 0 ⇒ nonzero), band→const map `{1:0xeff, 2:0xf37, 3:0x1eff, 4:0x1f37, 5:0x2cbe}`, `[sec+0xc6]=in[4]` (mode 3 ⇒ in[4]≥1); in[0]>3: drain 8-entry list at `RDI+0xfd8` (lock/unlock FUN_140260958/FUN_140261074, unlink + FUN_1400d7854 per entry) |
+| `0xff819003` | `0x14001a3b3` | `[sec+0x24]=in[0]` (0..2) |
+| `0xff819006` | `0x14001a398` | variadic blob → FUN_1400a66c8; nonzero return → error `0xc0010014` |
+| `0xff819007` | `0x14001a2c4` | **collect pending results**: in[0] must be 1; walks list at `RDI+0x668` (≤64 iterations, FUN_1400a40f8 per entry, entries with `[e+0x15]!=0` appended via FUN_1400cf18c); empty list → append default entry `[0x4af1c]`; finalize FUN_1400cf254 |
+| `0xff81900c` | `0x14001a22e` | **work-queue control**: in=0 → start queue at `RDI+0x540`; in=1 → start queue at `RDI+0x598` (both via FUN_14002d844); in>1 → `hal_write_trigger(0x17c)` (+`0x17d` if trace bit 0x8) |
+| `0xff819011` | `0x14001a522` | **rate/config setter + queue drain**: in[0]==1, 3 B: in[1] 1..0x40 → `[sec+0xfb]=in[1]`, `[sec+0xfc]=in[2]`; else drain per-IF queue at `0x646348` (list at `[RSI+0x108]`, FUN_14002c07c/FUN_1400b67e4/FUN_14003c878 per element), `[sec+0xfa]=0` then `2` |
+| `0xff819020` | `0x14001a4ab` | **toggle**: in=0 → `hal_write_trigger(0x181)`, `[0x655feb]=0`; else `0x182`, `[0x655feb]=1` |
+| `0xff819023` | `0x14001a48a` | `[main+0x762638]=in[0]` + DbgPrint(fmt `0x140264f00`) |
+| `0xff819024` | `0x14001a46f` | `[main+0x762640]=in[0]` + DbgPrint(`0x140264f20`) |
+| `0xff819025` | `0x14001a454` | `[main+0x762641]=in[0]` + DbgPrint(`0x140264f40`) |
+| `0xff819026` | `0x14001a60e` | `[main+0x762642]=in[0]` (u16, mirrored `[R13+0x115c]`) + DbgPrint(`0x140264f80`) |
+| `0xff819036` | `0x14001a78f` | store `in[0]` → `[0x656119]` (flag) |
+| `0xff81903d` | `0x14001a6fd` | needs ≥1 B; in==1 → gated `hal_write_trigger(0x187)`; `[0x6562da]=1`; `out[0]=inlen` |
+| `0xff81903e` | `0x14001a674` | `[0x6562dc]=in[0]`; `hal_write32(0x189, in[0])` (FUN_14000c990); `out[0]=inlen` |
+| `0xff81903f` | `0x14001a66f` | **true no-op** → `0x10001` |
+| `0xff819040` | `0x14001a79c` | `[sec+0x100]=in[0]`; `hal_write32(0x180, in[0])` |
+| `0xff819044` | `0x14001a8f7` | **toggle**: in==1 → `[0x655f64]=1` + gated `hal_write_trigger(0x185)`; else `[0x655f64]=0` |
+| `0xff819045` | `0x14001a87d` | **toggle**: in=0 → `[0x655f65]=1` + `hal_write_trigger(0x183)`; else `0x184` + `[0x655f65]=0`; `[0x655f66]=1` |
+| `0xff81904a` | `0x14001a86a` | variadic blob → FUN_1400a7488 |
+| `0xff81904b` | `0x14001a84c` | `[main+0x762644]=in[0]` (u16, mirrored `[R13+0x1160]`) |
+| `0xff81904c` | `0x14001a82e` | `[main+0x762646]=in[0]` (u16, mirrored `[R13+0x1162]`) |
+| `0xff819052` | `0x14001a945` | variadic → FUN_1400d03d8 |
+| `0xff819054` | `0x14001a9d8` | `[0x839145]=in[0]`; FUN_1400d021c(pDevice) |
+| `0xff819056` | `0x14001a9cb` | variadic → FUN_1400d03b4 |
+| `0xff819057` | `0x14001a9b8` | variadic → FUN_1400a7298; fail → error path |
+| `0xff819064` | `0x14001a97d` | `[0x65d802]=in[0..1]` (u16); `hal_write32(0x18a, in u16)` |
 
-The shared body is a two-instruction stub:
+### JNZ-stub correction (supersedes commit d68400b)
+
+The switch arms use the pattern
+
+```asm
+CMP EBX, 0xff81xxxx ; JNZ 0x14001a975
+<real body: store / helper call>
+```
+
+The `JNZ 0x14001a975` is the **non-match fallback** to the `0x10001` stub —
+i.e. "if this is *not* the OID, return the ack and do nothing". The **match
+path falls through** into the real body. The earlier reading (six OIDs are
+no-op acks) was backwards. Corrected classification:
+
+- **true no-ops** (match path lands directly on the stub): `0xff8168f3`,
+  `0xff81903f`.
+- **real work via fall-through**: `0xff819000` (2-field config),
+  `0xff81900c` (work-queue start / 0x17c-0x17d HAL writes), `0xff819025`
+  (store + DbgPrint), `0xff81904c` (u16 store at `main+0x762646`).
+
+The stub itself:
 
 ```asm
 0x14001a975: MOV R14D, 0x10001
 0x14001a97b: JMP 0x14001a9e8
-```
-
-and the common tail (reached by `JMP 0x14001a9e8` from most cases) is:
-
-```asm
 0x14001a9e8: MOV EAX, R14D          ; return value in EAX
 0x14001a9eb: MOV RCX, [RBP-8]; XOR RCX, RSP; CALL 0x140059560   ; canary check
-0x14001a9ff: ...epilogue... RET
 ```
 
-i.e. those six OIDs return a constant `0x10001` in EAX without touching the
-buffers (likely a no-op/ack status — semantics unverified). Note that
-0xff819064's target 0x14001a97d sits after this stub (the f3/90xx check falls
-through to the stub only when 0xff819064 is not matched).
+`0x10001` = standard "success, nothing to return" ack for the ack-only path.
+
+### Context layout notes (handler 1)
+
+- `RDI` = pDevice (adapter context); `[RDI+0xc40]` = main HW/state ctx;
+  `[RDI+0x5e01a0]` = secondary (per-IF or second device) ctx;
+  `[RDI+0x2000]` = per-interface ctx (index byte at `+0x118`).
+- `main+0x762638..0x762648` = **diagnostics config block** (8 sub-fields;
+  4 of them DbgPrint-ed on set — the Windows utility's diagnostics page).
+- `main+0x76d4xx` = **ADC sampler block** (config at 0x76d488, data cfg at
+  0x76d4b0, mode at 0x762648).
+- `[0x140292000]` = global debug/trace ctx: `+0x18`/`+0x58` = trace
+  sub-contexts, `+0x29` = log level, `+0x2c` = mask, `+0x69`/`+0x6c` =
+  second gate. `FUN_1400021ac`/`FUN_14000c990` writes here are **trace
+  events** (cmd 0x2b, event ids 0x17c-0x19c), not device register writes —
+  the cmd 0x2b id matches the usbmon write-command capture.
 
 ## Block bodies
 
@@ -1085,12 +1121,64 @@ _Last body in the function; boundary = function end (approx).
 0x14001a9b6: JMP 0x14001a9e8
 ```
 
-## Second handler: FUN_140015fc0
+## Handler 2 — FUN_140015fc0 (read/query family), decoded
 
-The run also captured the full instruction listing of FUN_140015fc0 (second
-vendor handler reached from the NDIS request path) — see
-`raw/disasm-FUN_140015fc0.txt`. Per-case analysis of it was not finished
-before the run was interrupted.
+Same call shape `(pDevice, OID, inBuf, inLen, outBuf, outLen)` but the
+opposite direction: **reads and queries**, including raw chip register
+access. 20 observed cases; default → `0x10001` ack. Each case is wrapped in
+paired trace events `FUN_1400021ac(trace_ctx, 0xbc..0xd9)` (debug ring, not
+device).
+
+| OID | semantics |
+|---|---|
+| `0xff0101cb` / `0xff8180a2` | **device-info block** (8 B out): `[0..3]=0x10ec0211` (tag: Realtek USB VID `0x10ec` + `0x0211`), `[4..5]` = class code mapped from hw-rev byte `[p1+0xc50]` (`0x0f→0x8188`, `0x18→0x8812`, `0x19/0x1b→0x8821`, `0x11..0x13→0x8192e`, else 0), then two descriptor queries via `*DAT_140443a40` (sizes 0x648/0x650); last byte = `read_chip_reg32(res>>1)` (byte/word by bit 0) or `0x20000000\|(res2&0xffff)` |
+| `0xff010408` | generic vendor query → FUN_1402640b4 |
+| `0xff0111c2` | generic vendor query → FUN_140263fc8 |
+| `0xff0111c9` | **raw register read**: in = `{u32 reg = *p3 & 0xfffff (20-bit), u32 shift = p3[1]>>4}`; out[0] = `read_chip_reg32(reg) >> shift` (byte/word width by bit 0) |
+| `0xff8168fa` | 4 B out: u32 at `[p1+0x5fb900]` (status) |
+| `0xff8168fb` | 4 B out: bool from FUN_1400bf7b4(p1) (status) |
+| `0xff81801a` | **operation mode** (4 B out): hw-mode byte `[p1+0xc52]` mapped `0x04→3, 0x06→1, 0x08→2, else 0` |
+| `0xff81801c` | 6 B out: hw-info bytes `[p1+0xc59..0xc5e]` |
+| `0xff818022` | **register read (explicit)**: in = `{u32 reg, u32 width}`; reg = `*p3>>1`, width `p3[1]` 1 (byte) or 2 (u16), LSB/MSB by `*p3 & 1`; via FUN_14012ce80 |
+| `0xff818040` | survey subsystem → FUN_140135db4 |
+| `0xff818041` | survey subsystem → FUN_140135c70 |
+| `0xff818042` | survey subsystem → FUN_140135ca0 (global ctx re-root) |
+| `0xff818045` | **table read + validity bitmap**: in = `{u32 idx, u32 mode∈{1,2,4}}`; `table_read_bitmap(main_ctx, mode, idx, &out32)` (FUN_1401294e4): reads 1/2/4-byte entry at `[main+0x2ce+idx]`, then ORs validity bits `FUN_14012b44c(idx+i)<<8i` for i<mode |
+| `0xff818047` | vtable call `[p1+0x9e8](p1, 0x14, &res8)` |
+| `0xff818049` | vtable call `[p1+0x9e8](p1, 0x16, &res8)` |
+| `0xff818051` | **bounded table read**: in = `{u32 idx, u32 mode∈{1,2,4}}`; byte at `[main+0x20e5+idx]`, bounds = u16 `[main+0x38f4]` (OOB → 0xff); mode 2/4 → FUN_14012c3e4 / FUN_14012c424 (FUN_140129ce8) |
+| `0xff818053` | trace-only (event 0xd4), returns success, no data |
+| `0xff818083` | 4 B out: byte `[p1+0x5e2328]` (status) |
+| `0xff8180a1` | getter → FUN_140121c04(p1, p5, ...) → out[0] |
+| `0xff818780` | **station/IF info dump** (220 B out): `[0]=([p1+0x7b0]==0?1:0)` valid flag, `[4..15]` = u32s from `[0x7c0..0x7cc]`, `[16..219]` = 219 B blob from per-IF ctx `+0x2000` (memcpy FUN_14002d210) |
+| `0xff818782` | **set+readback 7-bit control**: in = `{u32 val&0x7f, u32 dir}`; `write_chip_reg32(0x1bf, (dir!=1)<<24 \| val)` (FUN_14003e614); out[2] = `read_chip_reg8(0x1bf)` (FUN_14003db90); 12 B out |
+
+### Named helpers (decompiled 2026-10-20 pass)
+
+| function | inferred name | role |
+|---|---|---|
+| `FUN_1400021ac` | `hal_write_trigger` | 1-byte command write (cmd 0x2b) to a sub-context (device or trace ctx); no payload |
+| `FUN_14000c990` | `hal_write32` | 4-byte payload write, cmd 0x2b (ctx, subidx, value) |
+| `FUN_14012ce80` | `read_chip_reg32` | 20-bit-index chip register read → u32 |
+| `FUN_14003e614` | `write_chip_reg32` | chip register write (idx, value, flags) |
+| `FUN_14003db90` | `read_chip_reg8` | single-byte chip register read |
+| `FUN_14012b44c` | `entry_valid` | bool validity query, table at `main+0x2ce` |
+| `FUN_1401294e4` | `table_read_bitmap` | size 1/2/4 entry read at `main+0x2ce+idx` OR'd with validity bits |
+| `FUN_140129ce8` | `table_read_bounded` | byte read at `main+0x20e5+idx`, bounded by u16 `[main+0x38f4]`; u16/u32 siblings FUN_14012c3e4/FUN_14012c424 |
+| `FUN_140130190` | `adc_smp_set` | ADC sampler config: state/trig-sig/trig-sig-sel/dma-data-sig at `main+0x76d488`; on start → `adc_smp_start` |
+| `FUN_1401303b4` | `adc_smp_stop` | sampler state → 0 |
+| `FUN_14012ff20` | `adc_smp_start` | stop old sampler, then WDF DMA queue start (FUN_14002d844) |
+| `FUN_14012f2c4` | `sampler_cfg_apply` | store 10-byte config block at `main+0x8c90`, apply via FUN_14012f754 |
+| `FUN_14012f32c` | `sampler_if_tick` | per-IF state machine (per-IF ctx `+0x118` index; saturating 50-attempt counter at `+0x11a` with reset via FUN_14012e210; states 2/3/4) |
+| `FUN_14012dbd8` | `sampler_mode_dispatch` | mode 0..3 → FUN_14012ddf8 / FUN_14012f704+FUN_14012e9c4 / FUN_14012f0cc; state at `main+0x764440` |
+| `FUN_14012f754` | `work_apply` | generic apply/notify dispatch (xrefs from both sampler helpers + 4 other subsystems) |
+| `FUN_14002d844` | `wdf_queue_start` | work-queue / DMA transfer start (xrefs from 0xff81900c + sampler start) |
+
+The two OIDs that drive the **ADC hardware sampler** end-to-end:
+`0xff816818` (13-byte config + apply) and `0xff816802` (start/stop).
+The 10-byte config block `{u16, u16, u32, u8, u8}` is mirrored into both the
+secondary ctx and `main+0x76d4b0` — consistent with a
+`{rate, window, mask, sig, flags}` style sampling configuration.
 
 ## Unresolved questions (record_unknown from the run)
 
@@ -1101,13 +1189,27 @@ before the run was interrupted.
    every Windows-only 0xff8168xx vendor-control and WDI-IHV state path, in
    particular the private blob/config setters and the 0xff8190xx AMPDU controls?
 
-## Next pass (suggested)
+## Next pass
 
-- Name the CALLED helpers (FUN_14000c990, FUN_1400021ac, FUN_140130190,
-  FUN_1401303b4, FUN_14012f2c4, FUN_14012f32c, FUN_14012dbd8, FUN_14012dbd8) by
-  disassembling their prologues / matching string refs.
-- Correlate each case's hw effect with the captured usbmon traces
-  (`usbmon-runtime.txt`, `usbmon-init-5.6.4.txt`).
-- If TP-Link's Windows utility can be obtained, capture its NDIS OID traffic to
-  settle question 1.
+Done in this pass (2026-10-20, live REA session):
+- Decoded all 33 handler-1 bodies (semantics column in the case table).
+- Decoded all 20 handler-2 cases (read/query family, incl. raw register
+  reads `0xff0111c9` / `0xff818022`).
+- Placed and named 16 helpers (xref pass: all five previously unplaced
+  helpers now have call sites; ADCSmp set/stop/apply/tick/dispatch chain
+  complete).
+- Corrected the JNZ-stub interpretation (d68400b was backwards).
+
+Remaining:
+1. Cross-check handler 2 OID-range registration in the NdisM init path
+   (which OID-range call hands the 0xff8180xx family to FUN_140015fc0 vs
+   FUN_140019850).
+2. Map the survey subsystem helpers FUN_140135c70/db4/ca0
+   (0xff818040/41/42).
+3. Name the remaining blob setters (FUN_1400a9954/a9e2c/a66c8/a7488/
+   ab01c/ab0c8) — 36/66/68-byte config blobs from the utility.
+4. Identify the issuing user-mode component for `OID_WDI_IHV_REQUEST` and
+   the 0xff81xxxx private OIDs (TP-Link utility vs WDI service).
+5. Linux parity: expose the ADC-sampler + register-read surface in procfs
+   (driver side — the production work).
 

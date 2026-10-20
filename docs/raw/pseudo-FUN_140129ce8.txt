@@ -1,0 +1,21 @@
+# FUN_140129ce8 — table_read_bounded (Ghidra 12.1.4, REA MCP, 2026-10-20)
+# Called by OID 0xff818051 (handler FUN_140015fc0).
+# (p1 = main ctx, param_2 = size 1|2|4, param_3 = index, param_4 = out byte*)
+            uVar1 = param_2;
+            uVar2 = *param_1;
+            if (param_2 == 1) {
+              if (*(ushort *)(uVar2 + 0x38f4) < param_3) {
+                *param_4 = 0xff;                              # OOB sentinel
+              }
+              else {
+                *param_4 = *(undefined1 *)(uVar2 + 0x20e5 + param_3);
+              }
+            }
+            else if (uVar1 == 2) {
+              FUN_14012c3e4(p1, param_3, param_4);            # u16 sibling
+            }
+            else if (uVar1 == 4) {
+              FUN_14012c424(p1, param_3, param_4);            # u32 sibling
+            }
+            return;
+# Read: byte at [main+0x20e5+idx], bounds = u16 [main+0x38f4] (table size).
