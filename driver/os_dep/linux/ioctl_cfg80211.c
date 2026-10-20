@@ -16,6 +16,7 @@
 
 #include <drv_types.h>
 #include <hal_data.h>
+#include <generated/utsrelease.h>
 
 #ifdef CONFIG_IOCTL_CFG80211
 
@@ -6892,11 +6893,26 @@ static void rtw_get_chbwoff_from_cfg80211_chan_def(
 }
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0)) */
 
+/*
+ * The upstream callback has a netdev argument on newer kernels. Ubuntu
+ * backported that ABI into Ubuntu's 6.8.0-147 package. Its headers carry a
+ * patched 6.8.x LINUX_VERSION_CODE, not exactly KERNEL_VERSION(6, 8, 0).
+ * Limit the Ubuntu test to the whole 6.8.x line: Ubuntu 5.15 also has a
+ * larger ABI revision but keeps the two-argument callback.
+ */
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 101)) || \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0) && \
+	 LINUX_VERSION_CODE < KERNEL_VERSION(6, 9, 0) && \
+	 defined(UTS_UBUNTU_RELEASE_ABI) && \
+	 UTS_UBUNTU_RELEASE_ABI >= 147)
+#define RTW_CFG80211_SET_MONITOR_CHANNEL_HAS_NETDEV
+#endif
+
 static int cfg80211_rtw_set_monitor_channel(struct wiphy *wiphy
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0))
-  #if (LINUX_VERSION_CODE >= KERNEL_VERSION(6, 12, 101))
+	#if defined(RTW_CFG80211_SET_MONITOR_CHANNEL_HAS_NETDEV)
         , struct net_device *netdev
-  #endif
+	#endif
         , struct cfg80211_chan_def *chandef
 #else
 	, struct ieee80211_channel *chan
@@ -6906,6 +6922,9 @@ static int cfg80211_rtw_set_monitor_channel(struct wiphy *wiphy
 {
 	_adapter *padapter = wiphy_to_adapter(wiphy);
 	u8 target_channal, target_offset, target_width, ht_option;
+#if defined(RTW_CFG80211_SET_MONITOR_CHANNEL_HAS_NETDEV)
+	(void)netdev;
+#endif
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0))
 #ifdef CONFIG_DEBUG_CFG80211
