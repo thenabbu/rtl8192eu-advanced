@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>rtl8192eu portal</title>
+<link href="https://cdn.jsdelivr.net/npm/daisyui@5/dist/full.css" rel="stylesheet">
+<style>
+  body { font-family: ui-sans-serif, system-ui, sans-serif; }
+  .mono { font-family: ui-monospace, monospace; font-size: .85rem; }
+  #frames td, #frames th { white-space: nowrap; }
+  details > summary { cursor: pointer; }
+</style>
+</head>
+<body class="bg-base-200 min-h-screen">
+<div class="navbar bg-base-100 shadow">
+  <div class="flex-1 gap-3 px-2">
+    <span class="text-lg font-bold">rtl8192eu<span class="text-accent">portal</span></span>
+    <span id="drvver" class="badge badge-ghost badge-sm"></span>
+    <span id="modebadge" class="badge badge-primary"></span>
+  </div>
+  <div class="flex-none">
+    <ul class="menu menu-horizontal px-1 gap-1">
+      <li><a onclick="tab('dash')" id="tablink-dash" class="active">Dashboard</a></li>
+      <li><a onclick="tab('modes')" id="tablink-modes">Modes</a></li>
+      <li><a onclick="tab('monitor')" id="tablink-monitor">Monitor</a></li>
+    </ul>
+  </div>
+</div>
+
+<div class="p-4 max-w-6xl mx-auto space-y-4">
+  <div id="toast" class="toast toast-top toast-end z-50"></div>
+
+  <!-- ============ DASHBOARD ============ -->
+  <div id="page-dash" class="space-y-4">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="card bg-base-100 shadow">
+        <div class="card-body p-4">
+          <p class="text-xs opacity-60">Interface</p>
+          <h2 class="card-title" id="d-iface">—</h2>
+          <p class="text-xs opacity-60">IP <span id="d-ip" class="mono"></span> · <span id="d-mac"></span></p>
+        </div>
+      </div>
+      <div class="card bg-base-100 shadow">
+        <div class="card-body p-4">
+          <p class="text-xs opacity-60">Access point</p>
+          <h2 class="card-title" id="d-ssid">—</h2>
+          <p class="text-sm">ch <span id="d-chan">—</span> · country <span id="d-country">—</span></p>
+        </div>
+      </div>
+      <div class="card bg-base-100 shadow">
+        <div class="card-body p-4">
+          <p class="text-xs opacity-60">Received signal</p>
+          <h2 class="card-title" id="d-rssi">—</h2>
+          <progress class="progress progress-primary w-full" id="d-rssibar" value="0" max="100"></progress>
+        </div>
+      </div>
+      <div class="card bg-base-100 shadow">
+        <div class="card-body p-4">
+          <p class="text-xs opacity-60">Connected clients</p>
+          <h2 class="card-title" id="d-clients">—</h2>
+          <p class="text-xs opacity-60" id="d-clients-hint"></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="card bg-base-100 shadow"><div class="card-body p-4">
+        <p class="text-xs opacity-60">↓ received</p><h2 class="card-title" id="d-rx">—</h2></div></div>
+      <div class="card bg-base-100 shadow"><div class="card-body p-4">
+        <p class="text-xs opacity-60">↑ sent</p><h2 class="card-title" id="d-tx">—</h2></div></div>
+      <div class="card bg-base-100 shadow"><div class="card-body p-4">
+        <p class="text-xs opacity-60">packets rx / tx</p><h2 class="card-title" id="d-pkts">—</h2></div></div>
+      <div class="card bg-base-100 shadow"><div class="card-body p-4">
+        <p class="text-xs opacity-60">tx power offset</p><h2 class="card-title" id="d-txpwr">—</h2></div></div>
+    </div>
+
+    <div class="card bg-base-100 shadow">
+      <div class="card-body">
+        <h3 class="card-title text-base">Clients</h3>
+        <div class="overflow-x-auto">
+          <table class="table table-sm">
+            <thead><tr><th>MAC</th><th>↓ pkts</th><th>↑ pkts</th><th>↓ bytes</th><th>↑ bytes</th><th>rate</th><th>auth</th></tr></thead>
+            <tbody id="d-clients-tbl"><tr><td colspan="7" class="opacity-50">no clients</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card bg-base-100 shadow">
+      <div class="card-body">
+        <h3 class="card-title text-base">Driver</h3>
+        <p class="mono text-sm opacity-80" id="d-fw"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODES ============ -->
+  <div id="page-modes" class="hidden space-y-4">
+    <div class="grid md:grid-cols-3 gap-4">
+      <!-- AP -->
+      <div class="card bg-base-100 shadow">
+        <div class="card-body">
+          <div class="flex justify-between items-center">
+            <h3 class="card-title">Access Point</h3>
+            <button class="btn btn-sm btn-primary" onclick="modeSwitch('ap')">Switch to AP</button>
+          </div>
+          <p class="text-sm opacity-70" id="m-ap-note"></p>
+          <form class="space-y-2" onsubmit="netApply(event)">
+            <label class="form-control w-full"><span class="label-text mb-1">SSID</span>
+              <input class="input input-bordered w-full" id="ap-ssid" maxlength="32"></label>
+            <label class="form-control w-full"><span class="label-text mb-1">Passphrase (leave blank to keep)</span>
+              <input class="input input-bordered w-full" id="ap-pass" type="password" minlength="8"></label>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="form-control w-full"><span class="label-text mb-1">Channel</span>
+                <select class="select select-bordered w-full" id="ap-chan"></select></label>
+              <label class="form-control w-full"><span class="label-text mb-1">Country</span>
+                <input class="input input-bordered w-full" id="ap-country" maxlength="2" placeholder="IN"></label>
+            </div>
+            <label class="form-control w-full"><span class="label-text mb-1">Max clients</span>
+              <input class="input input-bordered w-full" id="ap-maxsta" type="number" min="1" max="255"></label>
+            <button class="btn btn-wide btn-warning" onclick="return true">Apply (restarts hostapd, clients drop)</button>
+          </form>
+        </div>
+      </div>
+      <!-- Station -->
+      <div class="card bg-base-100 shadow">
+        <div class="card-body">
+          <div class="flex justify-between items-center">
+            <h3 class="card-title">Station (client)</h3>
+            <button class="btn btn-sm" onclick="modeSwitch('station')">Switch to station</button>
+          </div>
+          <p class="text-sm opacity-70">Join an existing network. Adapter switches mode first — any AP you're running on it stops.</p>
+          <div class="join w-full">
+            <select class="select select-bordered join-item w-full" id="st-scan" disabled><option>no scan yet</option></select>
+            <button class="btn btn-secondary join-item" onclick="doScan()">Scan</button>
+          </div>
+          <label class="form-control w-full mt-2"><span class="label-text mb-1">Passphrase (blank = open network)</span>
+            <input class="input input-bordered w-full" id="st-pass" type="password"></label>
+          <button class="btn btn-wide" onclick="stationConnect()">Connect</button>
+        </div>
+      </div>
+      <!-- Monitor -->
+      <div class="card bg-base-100 shadow">
+        <div class="card-body">
+          <div class="flex justify-between items-center">
+            <h3 class="card-title">Monitor (sniff)</h3>
+            <button class="btn btn-sm btn-error" onclick="modeSwitch('monitor')">Switch to monitor</button>
+          </div>
+          <p class="text-sm opacity-70">Captures every frame in the air around the antenna — beacons, probes, handshakes, data. Nothing is sent; the radio only listens.</p>
+          <p class="text-sm" id="m-mon-state"></p>
+          <button class="btn btn-wide" onclick="tab('monitor')">Open live capture →</button>
+        </div>
+      </div>
+    </div>
+    <div class="alert alert-info text-sm">Mode switching brings the radio down for a couple of seconds and changes what this adapter does on your network. Nothing here touches the driver or kernel — it's a separate process you can kill any time.</div>
+  </div>
+
+  <!-- ============ MONITOR ============ -->
+  <div id="page-monitor" class="hidden space-y-4">
+    <div class="flex flex-wrap items-center gap-3">
+      <span id="mon-state" class="badge badge-ghost">idle</span>
+      <span class="opacity-60 text-sm" id="mon-summary"></span>
+      <label class="checkbox w-full"><input type="checkbox" id="mon-auto" checked onchange="monTimer()" >auto-refresh</label>
+      <button class="btn btn-sm btn-ghost" onclick="stopMon()">stop capture</button>
+    </div>
+    <div class="card bg-base-100 shadow">
+      <div class="card-body">
+        <div class="overflow-x-auto">
+          <table class="table table-sm" id="frames">
+            <thead><tr><th>time</th><th>type</th><th>subtype</th><th>addr1</th><th>addr2</th><th>addr3</th><th>ch</th><th>rate</th><th>sig</th><th>len</th></tr></thead>
+            <tbody id="mon-rows"><tr><td colspan="10" class="opacity-50">switch the adapter to monitor mode to start</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ADVANCED ============ -->
+  <div class="max-w-6xl mx-auto px-4 pb-8">
+    <details class="card bg-base-100 shadow" ontoggle="if (this.open) loadAdv()">
+      <summary class="card-body cursor-pointer py-3">
+        <h3 class="card-title">Advanced — raw driver knobs (procfs playground + register access)</h3>
+        <span class="badge badge-ghost">expert</span>
+      </summary>
+      <div class="card-body border-t">
+        <p class="text-sm opacity-70">Every entry the driver exposes under <span class="mono" id="adv-root"></span>. Read is always safe; writes to marked entries are live and can change radio behaviour. <span class="text-error">Register writes can knock the radio out — reboot or driver reload may be needed to recover.</span></p>
+        <div class="join w-full max-w-md">
+          <input class="input input-bordered join-item w-full" id="adv-q" placeholder="filter entries…" oninput="advFilter()">
+          <span class="badge badge-slate join-item" id="adv-count"></span>
+        </div>
+        <div class="grid md:grid-cols-3 gap-2 mt-3" id="adv-list"></div>
+
+        <div class="divider">register access</div>
+        <div class="grid md:grid-cols-2 gap-4">
+          <div class="form-control">
+            <span class="label-text mb-1">read register</span>
+            <div class="join w-full max-w-sm">
+              <input class="input input-bordered join-item mono" id="reg-addr" placeholder="0x424">
+              <select class="select select-bordered join-item" id="reg-len"><option>1</option><option selected>2</option><option>4</option></select>
+              <button class="btn btn-secondary join-item" onclick="regRead()">read</button>
+            </div>
+            <pre class="mono mt-2 bg-base-200 p-2 rounded-box" id="reg-out">—</pre>
+          </div>
+          <div class="form-control">
+            <span class="label-text mb-1">write register <span class="text-error">(dangerous)</span></span>
+            <div class="join w-full max-w-sm">
+              <input class="input input-bordered join-item mono" id="reg-waddr" placeholder="0x424">
+              <input class="input input-bordered join-item mono" id="reg-wval" placeholder="0x1234">
+              <select class="select select-bordered join-item" id="reg-wlen"><option>1</option><option selected>2</option><option>4</option></select>
+              <button class="btn btn-error join-item" onclick="regWrite()">write</button>
+            </div>
+            <p class="text-xs opacity-60 mt-1">You will be asked to type <span class="mono">DANGER</span> to confirm.</p>
+          </div>
+        </div>
+      </div>
+    </details>
+  </div>
+</div>
+
+<script>
+let curTab = "dash", dashTimer = null, monTimerId = null;
+const $ = id => document.getElementById(id);
+
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  if (r.status === 401) throw new Error("unauthorized");
+  if (!r.ok) {
+    let m = r.statusText;
+    try { m = (await r.json()).detail || m } catch {}
+    throw new Error(m);
+  }
+  return r.json();
+}
+function toast(msg, kind) {
+  const d = document.createElement("div");
+  d.className = `alert alert-${kind || "info"} alert-sm";
+  d.textContent = msg;
+  $("toast").appendChild(d);
+  setTimeout(() => d.remove(), 5000);
+}
+function human(n) {
+  if (n === undefined || n === null) return "—";
+  n = +n;
+  for (const u of ["B", "KB", "MB", "GB", "TB"]) { if (n < 1024) return n.toFixed(n < 10 && u !== "B" ? 1 : 0) + " " + u; n /= 1024; }
+  return n.toFixed(1) + " PB";
+}
+function tab(t) {
+  curTab = t;
+  for (const x of ["dash", "modes", "monitor"]) {
+    $("page-" + x).classList.toggle("hidden", x !== t);
+    $("tablink-" + x).classList.toggle("active", x === t);
+  }
+  if (t === "dash") { loadDash(); clearInterval(dashTimer); dashTimer = setInterval(loadDash, 5000); }
+  else clearInterval(dashTimer);
+  if (t === "monitor") { loadMon(); monTimer(); }
+  else if (monTimerId) { clearInterval(monTimerId); monTimerId = null; }
+  if (t === "modes") loadNet();
+}
+
+/* ---------- dashboard ---------- */
+async function loadDash() {
+  try {
+    const s = await api("/api/status");
+    $("drvver").textContent = s.driver || "";
+    const mb = $("modebadge");
+    mb.textContent = (s.mode || "?").toUpperCase();
+    mb.className = "badge " + (s.mode === "ap" ? "badge-success" : s.mode === "monitor" ? "badge-error" : s.mode === "station" ? "badge-info" : "badge-ghost");
+    $("d-iface").textContent = s.iface;
+    $("d-ip").textContent = s.ip || "—";
+    $("d-ssid").textContent = s.ap_info.ssid || "—";
+    $("d-chan").textContent = s.ap_info.channel || "—";
+    $("d-country").textContent = s.country || "—";
+    $("d-txpwr").textContent = (s.tx_power_offset || "0") + " dBm";
+    const rssi = s.rx_signal.rssi;
+    if (rssi !== undefined) {
+      $("d-rssi").textContent = rssi + " dBm";
+      $("d-rssibar").value = Math.max(0, Math.min(100, (rssi + 90) / 90 * 100));
+    }
+    $("d-rx").textContent = human(s.stats?.rx_bytes);
+    $("d-tx").textContent = human(s.stats?.tx_bytes);
+    $("d-pkts").textContent = ((s.stats?.rx_packets||0).toLocaleString() + " / " + (s.stats?.tx_packets||0).toLocaleString());
+    $("d-fw").textContent = s.fw_info || "";
+    const tb = $("d-clients-tbl");
+    $("d-clients").textContent = s.clients.length;
+    $("d-clients-hint").textContent = s.mode === "ap" ? "on this AP" : s.mode === "station" ? "(station mode)" : "";
+    tb.innerHTML = s.clients.length ? s.clients.map(c =>
+      `<tr><td class="mono">${c.mac}</td><td>${c.rx_pkts?.toLocaleString() ?? "—"}</td><td>${c.tx_pkts?.toLocaleString() ?? "—"}</td><td>${human(c.rx_bytes)}</td><td>${human(c.tx_bytes)}</td><td>${c.rx_tp ? (c.rx_tp/1000).toFixed(1)+" Mb/s" : "—"}</td><td>${c.wpa ? "wpa2" : "open"}</td></tr>`
+    ).join("") : `<tr><td colspan="7" class="opacity-50">no clients</td></tr>`;
+  } catch (e) { toast("dashboard: " + e.message, "error"); }
+}
+
+/* ---------- modes ---------- */
+let netData = null;
+let advLoaded = false;
+async function loadNet() {
+  if (advLoaded) return;
+  advLoaded = true;
+  try {
+    netData = await api("/api/net");
+    const h = netData.hostapd;
+    if (h) {
+      $("ap-ssid").value = h.ssid || "";
+      $("ap-country").value = h.country_code || "";
+      $("ap-maxsta").value = h.max_num_sta || 8;
+      const sel = $("ap-chan");
+      sel.innerHTML = "";
+      for (let c = 1; c <= 13; c++) {
+        const o = document.createElement("option");
+        o.value = c; o.textContent = c + (c === (h.channel|0) ? "  ← current" : "");
+        sel.appendChild(o);
+      }
+      $("m-ap-note").textContent = `hostapd.conf found at ${h._path}. Applying restarts hostapd — all clients reconnect.`;
+    } else {
+      $("m-ap-note").innerHTML = netData.tools.hostapd
+        ? "no hostapd.conf found on this machine yet."
+        : "hostapd is not installed here. <span class='mono'>apt install hostapd dnsmasq</span> (or your distro's equivalent), then create /etc/hostapd/hostapd.conf.";
+    }
+    if (!netData.tools.wpa_supplicant)
+      $("m-mon-state").textContent = "";
+  } catch (e) { toast("net: " + e.message, "error"); }
+}
+async function netApply(ev) {
+  ev && ev.preventDefault();
+  if (!confirm("Restart hostapd with the new settings? Connected clients will drop.")) return;
+  const body = { ssid: $("ap-ssid").value, channel: $("ap-chan").value,
+    country_code: $("ap-country").value, max_num_sta: $("ap-maxsta").value, confirm: "RESTART" };
+  if ($("ap-pass").value) body.passphrase = $("ap-pass").value;
+  try {
+    const r = await api("/api/net", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(body) });
+    toast("applied — hostapd " + r.hostapd, "success"); loadDash();
+  } catch (e) { toast(e.message, "error"); }
+}
+async function doScan() {
+  const sel = $("st-scan");
+  sel.innerHTML = "<option>scanning…</option>"; sel.disabled = true;
+  try {
+    const nets = await api("/api/scan");
+    sel.innerHTML = ""; sel.disabled = false;
+    if (!nets.length) { sel.innerHTML = "<option>nothing found</option>"; return; }
+    for (const n of nets) {
+      const o = document.createElement("option");
+      o.value = n.ssid; o.textContent = `${n.ssid}  ${n.signal}dBm @ ${n.freq}MHz`;
+      sel.appendChild(o);
+    }
+  } catch (e) { toast("scan: " + e.message, "error"); sel.disabled = false; sel.innerHTML = "<option>no scan yet</option>"; }
+}
+async function stationConnect() {
+  const ssid = $("st-scan").value;
+  if (!ssid || ssid.includes("scan")) return toast("pick a network from the scan list first", "warning");
+  if (!confirm(`Switch ${ssid ? "to station mode" : ""} and connect to "${ssid}"?`)) return;
+  try {
+    await api("/api/station", { method: "POST", headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ ssid, passphrase: $("st-pass").value, confirm: "CONNECT" }) });
+    toast("wpa_supplicant started, associating…", "success");
+  } catch (e) { toast(e.message, "error"); }
+}
+async function modeSwitch(mode) {
+  if (!confirm(`Switch the radio to ${mode.toUpperCase()} mode?\n\nThe radio goes down for a couple of seconds. If you're running this portal on the same machine you'd lose connectivity on this adapter during the switch.`)) return;
+  try {
+    const r = await api("/api/mode", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ mode, confirm: "SWITCH" }) });
+    toast("now: " + r.mode + " — " + r.log.join(", "), "success");
+    loadDash();
+  } catch (e) { toast(e.message, "error"); }
+}
+
+/* ---------- monitor ---------- */
+async function loadMon() {
+  try {
+    const m = await api("/api/monitor/frames");
+    const st = $("mon-state");
+    st.textContent = m.mode === "monitor" ? (m.active ? "capturing" : "starting…") : "adapter in " + m.mode + " mode — switch to monitor first";
+    st.className = "badge " + (m.active ? "badge-success" : "badge-ghost");
+    $("m-mon-state").textContent = st.textContent;
+    const rows = [...m.frames].reverse().slice(0, 40);
+    $("mon-rows").innerHTML = rows.length ? rows.map(f =>
+      `<tr><td class="mono">${f.t}</td><td>${f.type}</td><td>${f.subtype}</td><td class="mono">${f.a1}</td><td class="mono">${f.a2}</td><td class="mono">${f.a3}</td><td>${f.ch}</td><td>${f.rate}</td><td>${f.sig}</td><td>${f.len}</td></tr>`
+    ).join("") : `<tr><td colspan="10" class="opacity-50">no frames yet…</td></tr>`;
+    $("mon-summary").textContent = Object.entries(m.counts).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([k,v])=>`${k}: ${v}`).join("   ");
+  } catch (e) { toast("monitor: " + e.message, "error"); }
+}
+function monTimer() {
+  if (monTimerId) { clearInterval(monTimerId); monTimerId = null; }
+  if ($("mon-auto").checked) { monTimerId = setInterval(loadMon, 2000); loadMon(); }
+}
+async function stopMon() { try { await api("/api/monitor/stop", { method: "POST" }); loadMon(); } catch (e) { toast(e.message, "error"); } }
+
+/* ---------- advanced ---------- */
+let procList = {};
+async function loadAdv() {
+  if (advLoaded) return;
+  advLoaded = true;
+  try {
+    procList = await api("/api/proc");
+    const box = $("adv-list");
+    box.innerHTML = Object.entries(procList).map(([n, w]) =>
+      `<button class="btn btn-sm ${w ? "btn-outline" : "btn-ghost"} text-start mono justify-start" onclick="advOpen('${n}')">${n}${w ? "" : " <span class='opacity-40'>r/o</span>"}</button>`
+    ).join("");
+    $("adv-count").textContent = Object.keys(procList).length + " entries";
+    $("adv-root").textContent = document.querySelector("#d-fw")?.textContent?.trim() || "";
+  } catch (e) { toast("advanced: " + e.message, "error"); }
+}
+function advFilter() {
+  const q = $("adv-q").value.toLowerCase();
+  let n = 0;
+  for (const b of $("adv-list").children) {
+    const show = !q || b.textContent.toLowerCase().includes(q);
+    b.style.display = show ? "" : "none";
+    if (show) n++;
+  }
+  $("adv-count").textContent = n + " entries";
+}
+async function advOpen(name) {
+  try {
+    const text = await api("/api/proc/read?name=" + encodeURIComponent(name));
+    const w = procList[name];
+    const modal = document.createElement("div");
+    modal.className = "modal modal-open";
+    modal.innerHTML = `<div class="modal-box max-w-2xl">
+      <h3 class="font-bold mono mb-2">${name} ${w ? "(writable)" : "(read-only)"}</h3>
+      <pre class="mono bg-base-200 p-2 rounded-box max-h-64 overflow-auto">${text.replace(/</g,"&lt;") || "(empty)"}</pre>
+      ${w ? `<label class="form-control mt-3"><span class="label-text mb-1">set value</span>
+        <input class="input input-bordered mono" id="adv-val" value="${text.trim().replace(/"/g, "&quot;")}">
+        <button class="btn btn-wide btn-warning mt-2" id="adv-write">write (live effect)</button></label>` : ""}
+      <div class="modal-action"><button class="btn" onclick="this.closest('.modal').remove()">close</button></div>
+    </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+    const wb = modal.querySelector("#adv-write");
+    if (wb) wb.onclick = async () => {
+      const val = modal.querySelector("#adv-val").value;
+      const confirmStr = name === "write_reg" || name === "read_reg" ? prompt("type DANGER to confirm this raw register " + (name === "write_reg" ? "write" : "access") + ":") : confirm(`Write "${val}" to ${name}? This takes effect immediately on the radio.`) ? "ok" : null;
+      if (!confirmStr) return;
+      if (name === "write_reg" || name === "read_reg") { if (confirmStr !== "DANGER") return toast("aborted", "warning"); }
+      try {
+        await api("/api/proc/write", { method: "POST", headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({ name, value: val, confirm: name === "write_reg" || name === "read_reg" ? "DANGER" : "ok" }) });
+        toast(`${name} ← ${val}`, "success");
+        modal.remove(); advLoaded = false; loadAdv();
+      } catch (e) { toast(e.message, "error"); }
+    };
+  } catch (e) { toast(e.message, "error"); }
+}
+async function regRead() {
+  const a = $("reg-addr").value.trim(), l = $("reg-len").value;
+  if (!/^0[xX][0-9a-fA-F]+$/.test(a)) return toast("address like 0x424", "warning");
+  try {
+    const t = await api(`/api/proc/read?name=read_reg&reg=${encodeURIComponent(a)}&len_=${l}`);
+    $("reg-out").textContent = t.trim();
+  } catch (e) { toast(e.message, "error"); }
+}
+async function regWrite() {
+  const a = $("reg-waddr").value.trim(), v = $("reg-wval").value.trim(), l = $("reg-wlen").value;
+  if (!/^0[xX][0-9a-fA-F]+$/.test(a) || !/^0[xX][0-9a-fA-F]+$/.test(v)) return toast("hex values like 0x424 / 0x1234", "warning");
+  const c = prompt(`RAW REGISTER WRITE\n${a} ← ${v} (${l}-byte)\n\nA wrong value can take the radio down. Type DANGER to proceed:`);
+  if (c !== "DANGER") return toast("aborted", "warning");
+  try {
+    await api("/api/proc/write", { method: "POST", headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ name: "write_reg", value: `${a} ${v} ${l}`, confirm: "DANGER" }) });
+    toast("written — reading back…", "success");
+    setTimeout(() => { $("reg-addr").value = a; $("reg-len").value = l; regRead(); }, 400);
+  } catch (e) { toast(e.message, "error"); }
+}
+
+tab("dash");
+</script>
+</body>
+</html>

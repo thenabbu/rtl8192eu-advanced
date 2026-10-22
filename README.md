@@ -36,6 +36,7 @@ flowchart LR
 - `driver/os_dep/linux/` — USB transport + cfg80211 glue
 - `tools/` — LED control, monitor injection test, usbmon parser
 - `docs/` — the reverse-engineering results (wire protocol, register map, Windows OID surface)
+- `portal/` — router-style web control panel ([portal/README.md](portal/README.md))
 
 ## Install
 
@@ -94,6 +95,7 @@ Every fix has A/B kernel-log proof in [`docs/bugs-found.md`](docs/bugs-found.md)
 | [`docs/led-control.md`](docs/led-control.md) | LED registers and semantics |
 | [`docs/feature-matrix.md`](docs/feature-matrix.md) | official vs community vs this driver |
 | [`docs/bugs-found.md`](docs/bugs-found.md) | every bug, with before/after log proof |
+| [`portal/README.md`](portal/README.md) | the web portal — dashboard, mode switching, procfs playground |
 
 ---
 

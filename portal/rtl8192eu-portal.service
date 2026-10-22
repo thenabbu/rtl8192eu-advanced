@@ -1,0 +1,14 @@
+[Unit]
+Description=rtl8192eu web portal (driver control panel)
+After=network.target
+
+[Service]
+User=root
+WorkingDirectory=/opt/rtl8192eu-portal
+EnvironmentFile=/opt/rtl8192eu-portal/portal.env
+ExecStart=/opt/rtl8192eu-portal/venv/bin/python /opt/rtl8192eu-portal/portal.py
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

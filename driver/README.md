@@ -1,6 +1,7 @@
 # 8192eu — install guide
 
-Builds on kernels 5.x → 7.0 (CI-verified on Ubuntu 22.04 / 5.15 and 24.04 / 6.8).
+Builds on kernels 5.x → 7.0. CI-verified on Ubuntu 22.04 / 5.15 and 24.04 / 6.8;
+field-verified on Debian 13 (trixie) / 6.12 — DKMS clean build, AP duty.
 
 **Monitor mode** is enabled in this tree (`CONFIG_WIFI_MONITOR = y`).
 
