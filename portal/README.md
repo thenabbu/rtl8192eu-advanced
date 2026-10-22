@@ -60,6 +60,25 @@ sudo rm -rf /opt/rtl8192eu-portal /etc/systemd/system/rtl8192eu-portal.service
 sudo systemctl daemon-reload
 ```
 
+## autosense — the self-managing mode daemon (optional)
+
+`autosense.py` is a separate root daemon that makes the adapter run itself:
+
+- **idle (no clients for `AS_IDLE_SECS`)** → monitor mode, **LED breathing**
+- **probe request for the AP SSID seen in the air** (a saved device looking
+  for the network) → AP mode, **LED blinking** — hostapd + dnsmasq come back
+- **ethernet down** (`AS_ETH_IFACE` carrier or gateway ping) → station mode
+  on the upstream Wi-Fi (`AS_UPSTREAM_SSID`), **LED solid**, Telegram alert;
+  ethernet recovery → AP again + alert
+
+Enable by setting `AS_ENABLE=1` (+ `TG_BOT_TOKEN`/`TG_CHAT_ID` for alerts,
+`AS_UPSTREAM_PASS` for failover) in `portal.env` — install.sh enables the
+`autosense` unit when it sees that. Dry-run everything with `AS_DRY=1`.
+
+Wire details: the LED is raw `write_reg` on LEDCFG1 (0x4d) — bit7 off=on,
+per `docs/led-control.md`. AP iftype changes go **through hostapd**, not
+`iw` (this driver refuses `iw set type ap` without a beacon head).
+
 ## Self-check
 
 ```sh

@@ -1,0 +1,15 @@
+[Unit]
+Description=autosense — RTL8192EU self-managing mode daemon (monitor/AP/station failover)
+After=network.target hostapd.service
+Wants=hostapd.service
+
+[Service]
+User=root
+WorkingDirectory=/opt/rtl8192eu-portal
+EnvironmentFile=/opt/rtl8192eu-portal/portal.env
+ExecStart=/opt/rtl8192eu-portal/venv/bin/python /opt/rtl8192eu-portal/autosense.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

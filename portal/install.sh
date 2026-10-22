@@ -25,6 +25,8 @@ fi
 # --- portal files + venv ---------------------------------------------------
 mkdir -p "$DEST"
 cp "$SRC/portal.py" "$SRC/index.html" "$DEST"/
+cp "$SRC/autosense.py" "$DEST"/ 2>/dev/null || true
+cp "$SRC/autosense.service" /etc/systemd/system/ 2>/dev/null || true
 python3 -m venv "$DEST/venv"
 "$DEST/venv/bin/pip" install --quiet fastapi 'uvicorn[standard]' scapy
 
@@ -41,6 +43,9 @@ ENV
 cp "$SRC/rtl8192eu-portal.service" /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable --now rtl8192eu-portal
+grep -q AS_ENABLE "$DEST/portal.env" || printf "\n# autosense mode daemon (opt-in): 1 = monitor-idle + probe-wake + ethernet failover\nAS_ENABLE=0\nAS_SSID=BlockiNG\nAS_IDLE_SECS=300\nAS_UPSTREAM_SSID=NGJIO\nAS_UPSTREAM_PASS=\nAS_GATEWAY=192.168.29.1\n# TG_BOT_TOKEN=\n# TG_CHAT_ID=\n" >> "$DEST/portal.env"
+systemctl daemon-reload
+if grep -q "^AS_ENABLE=1" "$DEST/portal.env"; then systemctl enable --now autosense; fi
 
 echo
 echo "installed."
