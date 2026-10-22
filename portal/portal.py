@@ -153,11 +153,14 @@ def parse_sta_info(text, own=None):
             ("tx_bytes", r"tx_bytes=(\d+)"),
             ("rx_bytes", r"rx_uc_bytes=(\d+)"),
             ("rx_tp", r"rx_tp =(\d+)"),
+            ("rssi", r"rssi=(\d+)"),
         ):
             m2 = re.search(pat, line)
             if m2:
                 cur[key] = int(m2.group(1))
-        if "wpa2_psk=0x1" in line or "wpa_psk=0x1" in line:
+        # real security: any nonzero wpa/wpa2 cipher flags
+        m3 = re.search(r"wpa(?:2)?_(?:psk|group_cipher|pairwise_cipher)=0x([1-9a-fA-F][0-9a-fA-F]*)", line)
+        if m3:
             cur["wpa"] = True
     return [c for c in clients
             if c["mac"] != own
@@ -239,13 +242,15 @@ def selftest():
 sta's macaddr:8c:90:2d:95:2a:8d
 rtsen=0, cts2slef=0
 state=0x15, aid=1, macid=3, raid=1
-wpa_psk=0x0
-wpa2_psk=0x1
+wpa_psk=0x2
+wpa2_group_cipher=0x10
+wpa2_pairwise_cipher=0x10
 rx_data_uc_pkts=1234
 rx_uc_bytes=56789
 rx_tp =24000 (Kbps)
 tx_data_pkts=99
 tx_bytes=1000
+rssi=67
 ==============================
 sta's macaddr:ff:ff:ff:ff:ff:ff
 rx_data_uc_pkts=0
@@ -256,6 +261,7 @@ rx_uc_bytes=0
     c = parse_sta_info(sample)
     assert len(c) == 1 and c[0]["mac"] == "8c:90:2d:95:2a:8d", c
     assert c[0]["rx_pkts"] == 1234 and c[0]["tx_pkts"] == 99 and c[0]["wpa"], c
+    assert c[0]["rssi"] == 67, c
     cfg = "interface=wlan0\nssid=BlockiNG\nchannel=11\n# comment\nwpa_passphrase=AHA@password\nht_capab=[RX-STBC1]\nmax_num_sta=25\n"
     t = re.sub(r"^channel=.*$", "channel=6", cfg, flags=re.M)
     t = re.sub(r"^ssid=.*$", "ssid=Test", t, flags=re.M)
@@ -446,22 +452,31 @@ async def mode_set(req: Request):
         raise HTTPException(400, "mode must be ap|station|monitor")
     if body.get("confirm") != "SWITCH":
         raise HTTPException(400, "confirm='SWITCH' required")
+    iwtype = {"ap": "ap", "station": "managed", "monitor": "monitor"}[mode]
+    iw_bin = which("iw") or "/usr/sbin/iw"
     log = []
-    if mode != "ap" and service_state("hostapd") == "active":
+    hostapd_was = service_state("hostapd")
+    if mode != "ap" and hostapd_was == "active":
         run("systemctl", "stop", "hostapd")
         log.append("stopped hostapd")
     if mode != "station":
-        rc, _, _ = run("pkill", "-x", "wpa_supplicant")
-        if rc == 0:
-            log.append("stopped wpa_supplicant")
-    rc, _, _ = run("ip", "link", "set", IFACE, "down")
-    log.append(f"ip link set {IFACE} down")
-    rc, out, err = run("ip", "link", "set", IFACE, "type", mode)
+        run("pkill", "-x", "wpa_supplicant")
+        log.append("stopped wpa_supplicant (if running)")
+    run("ip", "link", "set", IFACE, "down")
+    rc, out, err = run(iw_bin, "dev", IFACE, "set", "type", iwtype)
     if rc != 0:
+        # undo: back to AP type + service, never leave production dead
+        run(iw_bin, "dev", IFACE, "set", "type", "ap")
         run("ip", "link", "set", IFACE, "up")
-        raise HTTPException(500, f"switch failed: {err.strip()} (link restored)")
+        if hostapd_was == "active":
+            run("systemctl", "start", "hostapd")
+            log.append("restored hostapd")
+        detail = f"switch failed: {err.strip() or out.strip()}"
+        if hostapd_was == "active":
+            detail += " — AP restored"
+        raise HTTPException(500, detail)
     run("ip", "link", "set", IFACE, "up")
-    log.append(f"ip link set {IFACE} up")
+    log.append(f"{IFACE} -> {iwtype}")
     if mode == "ap" and which("hostapd"):
         run("systemctl", "start", "hostapd")
         log.append("started hostapd")

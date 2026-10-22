@@ -4,9 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>rtl8192eu portal</title>
-<link href="https://cdn.jsdelivr.net/npm/daisyui@5/dist/full.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/daisyui@5/daisyui.css" rel="stylesheet">
 <style>
   body { font-family: ui-sans-serif, system-ui, sans-serif; }
+  .card { border: 1px solid var(--color-base-300); }
   .mono { font-family: ui-monospace, monospace; font-size: .85rem; }
   #frames td, #frames th { white-space: nowrap; }
   details > summary { cursor: pointer; }
@@ -80,7 +81,7 @@
         <h3 class="card-title text-base">Clients</h3>
         <div class="overflow-x-auto">
           <table class="table table-sm">
-            <thead><tr><th>MAC</th><th>↓ pkts</th><th>↑ pkts</th><th>↓ bytes</th><th>↑ bytes</th><th>rate</th><th>auth</th></tr></thead>
+            <thead><tr><th>MAC</th><th>↓ pkts</th><th>↑ pkts</th><th>↓ bytes</th><th>↑ bytes</th><th>rate</th><th>signal</th><th>auth</th></tr></thead>
             <tbody id="d-clients-tbl"><tr><td colspan="7" class="opacity-50">no clients</td></tr></tbody>
           </table>
         </div>
@@ -223,7 +224,13 @@ let curTab = "dash", dashTimer = null, monTimerId = null;
 const $ = id => document.getElementById(id);
 
 async function api(path, opts) {
-  const r = await fetch(path, opts);
+  let r;
+  try {
+    r = await fetch(path, opts);
+  } catch (e) {
+    // browsers that inherit embedded creds from the document URL — retry absolute
+    r = await fetch(location.protocol + "//" + location.host + path, opts);
+  }
   if (r.status === 401) throw new Error("unauthorized");
   if (!r.ok) {
     let m = r.statusText;
@@ -234,7 +241,7 @@ async function api(path, opts) {
 }
 function toast(msg, kind) {
   const d = document.createElement("div");
-  d.className = `alert alert-${kind || "info"} alert-sm";
+  d.className = `alert alert-${kind || "info"} alert-sm`;
   d.textContent = msg;
   $("toast").appendChild(d);
   setTimeout(() => d.remove(), 5000);
@@ -285,8 +292,8 @@ async function loadDash() {
     $("d-clients").textContent = s.clients.length;
     $("d-clients-hint").textContent = s.mode === "ap" ? "on this AP" : s.mode === "station" ? "(station mode)" : "";
     tb.innerHTML = s.clients.length ? s.clients.map(c =>
-      `<tr><td class="mono">${c.mac}</td><td>${c.rx_pkts?.toLocaleString() ?? "—"}</td><td>${c.tx_pkts?.toLocaleString() ?? "—"}</td><td>${human(c.rx_bytes)}</td><td>${human(c.tx_bytes)}</td><td>${c.rx_tp ? (c.rx_tp/1000).toFixed(1)+" Mb/s" : "—"}</td><td>${c.wpa ? "wpa2" : "open"}</td></tr>`
-    ).join("") : `<tr><td colspan="7" class="opacity-50">no clients</td></tr>`;
+      `<tr><td class="mono">${c.mac}</td><td>${c.rx_pkts?.toLocaleString() ?? "—"}</td><td>${c.tx_pkts?.toLocaleString() ?? "—"}</td><td>${human(c.rx_bytes)}</td><td>${human(c.tx_bytes)}</td><td>${c.rx_tp ? (c.rx_tp/1000).toFixed(1)+" Mb/s" : "—"}</td><td>${c.rssi ? "-"+c.rssi+" dBm" : "—"}</td><td>${c.wpa ? "wpa2" : "open"}</td></tr>`
+    ).join("") : `<tr><td colspan="8" class="opacity-50">no clients</td></tr>`;
   } catch (e) { toast("dashboard: " + e.message, "error"); }
 }
 
@@ -310,6 +317,7 @@ async function loadNet() {
         o.value = c; o.textContent = c + (c === (h.channel|0) ? "  ← current" : "");
         sel.appendChild(o);
       }
+      sel.value = h.channel | 0 || 1;
       $("m-ap-note").textContent = `hostapd.conf found at ${h._path}. Applying restarts hostapd — all clients reconnect.`;
     } else {
       $("m-ap-note").innerHTML = netData.tools.hostapd
