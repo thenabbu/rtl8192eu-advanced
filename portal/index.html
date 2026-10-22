@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>rtl8192eu portal</title>
 <link href="https://cdn.jsdelivr.net/npm/daisyui@5/daisyui.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 <style>
   body { font-family: ui-sans-serif, system-ui, sans-serif; }
   .card { border: 1px solid var(--color-base-300); }
@@ -299,10 +300,7 @@ async function loadDash() {
 
 /* ---------- modes ---------- */
 let netData = null;
-let advLoaded = false;
 async function loadNet() {
-  if (advLoaded) return;
-  advLoaded = true;
   try {
     netData = await api("/api/net");
     const h = netData.hostapd;
@@ -396,8 +394,6 @@ async function stopMon() { try { await api("/api/monitor/stop", { method: "POST"
 /* ---------- advanced ---------- */
 let procList = {};
 async function loadAdv() {
-  if (advLoaded) return;
-  advLoaded = true;
   try {
     procList = await api("/api/proc");
     const box = $("adv-list");
@@ -444,7 +440,7 @@ async function advOpen(name) {
         await api("/api/proc/write", { method: "POST", headers: {"Content-Type":"application/json"},
           body: JSON.stringify({ name, value: val, confirm: name === "write_reg" || name === "read_reg" ? "DANGER" : "ok" }) });
         toast(`${name} ← ${val}`, "success");
-        modal.remove(); advLoaded = false; loadAdv();
+        modal.remove(); loadAdv();
       } catch (e) { toast(e.message, "error"); }
     };
   } catch (e) { toast(e.message, "error"); }
