@@ -3,36 +3,43 @@
 # rtl8192eu driver's procfs register interface. No rebuild needed.
 #
 # usage: sudo rtlled.sh status
-#        sudo rtlled.sh on   [reg]   # default reg=4d (LEDCFG1)
-#        sudo rtlled.sh off  [reg]
-#        sudo rtlled.sh blink [n] [reg]   # n cycles, default 3
+#        sudo rtlled.sh on
+#        sudo rtlled.sh off
+#        sudo rtlled.sh blink [n]   # n cycles, default 3
 #
-# Registers: 4c=LEDCFG0 4d=LEDCFG1 4e=LEDCFG2 (see docs/led-control.md)
-# Semantics (from hal/rtl8192e/usb/rtl8192eu_led.c): clear bit7 = LED ON,
-# set bit7 = LED OFF.
+# Proven 2026-10-24 (user-verified on the physical dongle): the visible
+# LED is LED1 (this chip has no LED0) = bit 11 of the 32-bit
+# PHY/baseband register 0x4C (0 = ON, 1 = OFF), gated by clearing
+# 0x64 bit 1 and 0x4C bits 15/10/9/8. Byte writes to MAC 0x4c/0x4d/0x4e
+# do NOT light the LED. See docs/led-control.md.
 P=${RTLLED_PROC:-/proc/net/rtl8192eu/wlan0}
-REG=${2:-4d}
-[ -w "$P/read_reg" ] || { echo "need root / driver not loaded"; exit 1; }
+[ -w "$P/write_reg" ] || { echo "need root / driver not loaded"; exit 1; }
 
-rd() { echo "$1 1" > "$P/read_reg"; cat "$P/read_reg" | sed 's/.*=0x//'; }
-wr() { echo "$1 $2 1" > "$P/write_reg"; }
+r32() { echo "$1 4" > "$P/read_reg"; cat "$P/read_reg" | tail -1 | sed 's/.*=0x//'; }
+w32() { echo "$1 $2 4" > "$P/write_reg"; }
+arm() { # one-time gate config; caches 0x4C dword with gates cleared
+  v64=$(r32 64); w32 64 $(printf %x $(( 0x$v64 & ~0x2 )))
+  BASE=$(( 0x$(r32 4c) & ~0x8f00 ))
+}
 
 cmd=$1
 case $cmd in
   status)
-    for r in 4c 4d 4e 64; do
-      REG=$r; echo "LEDCFG@$r = 0x$(rd $r)"
-    done ;;
-  on)  v=$(rd $REG); wr $REG $(printf %x $(( 0x$v & ~0x80 ))); echo "$REG -> 0x$(rd $REG) (bit7 clear = ON)" ;;
-  off) v=$(rd $REG); wr $REG $(printf %x $(( 0x$v | 0x80 ))); echo "$REG -> 0x$(rd $REG) (bit7 set = OFF)" ;;
+    v64=$(r32 64); v4c=$(r32 4c)
+    echo "0x64 = 0x$v64 (bit1 = $(( (0x$v64 >> 1) & 1 )))"
+    echo "0x4c = 0x$v4c (bit11 = $(( (0x$v4c >> 11) & 1 )) : 0=ON 1=OFF)"
+    echo "gate bits 15/10/9/8 = 0x$(( 0x$v4c & 0x8700 ))"
+    ;;
+  on)  arm; w32 4c $(printf %x $BASE);             echo "ON  0x4c=0x$(r32 4c)" ;;
+  off) arm; w32 4c $(printf %x $((BASE | 0x800))); echo "OFF 0x4c=0x$(r32 4c)" ;;
   blink)
-    n=${2:-3}; REG=${3:-4d}; i=0
-    v=$(rd $REG)
+    n=${2:-3}; i=0; arm
     while [ $i -lt $n ]; do
-      wr $REG $(printf %x $(( 0x$v & ~0x80 ))); sleep 0.4
-      wr $REG $(printf %x $(( 0x$v | 0x80 ))); sleep 0.4
+      w32 4c $(printf %x $BASE); sleep 0.4
+      w32 4c $(printf %x $((BASE | 0x800))); sleep 0.4
       i=$((i+1))
     done
-    echo "blinked $REG x$n, left at 0x$(rd $REG)" ;;
-  *) echo "usage: rtlled.sh {status|on|off|blink [n] [reg]}"; exit 1 ;;
+    echo "blinked $n x, left OFF (0x4c = 0x$(r32 4c))"
+    ;;
+  *) echo "usage: rtlled.sh {status|on|off|blink [n]}"; exit 1 ;;
 esac
