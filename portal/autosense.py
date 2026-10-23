@@ -28,6 +28,8 @@ GATEWAY = os.environ.get("AS_GATEWAY", "192.168.29.1")
 IDLE_SECS = int(os.environ.get("AS_IDLE_SECS", "300"))
 TICK = int(os.environ.get("AS_TICK", "5"))
 DEBOUNCE = int(os.environ.get("AS_DEBOUNCE", "2"))
+PAUSE_FILE = Path(os.environ.get(
+    "AS_PAUSE_FILE", str(Path(__file__).resolve().parent / "autosense.pause")))
 DRY = os.environ.get("AS_DRY", "") == "1"
 TG_TOKEN = os.environ.get("TG_BOT_TOKEN", "")
 TG_CHAT = os.environ.get("TG_CHAT_ID", "")
@@ -215,7 +217,9 @@ def sniff_probes(ssid, hit):
             hit()
     while probe_watch.is_set():
         try:
-            sniff(iface=IFACE, prn=prn, store=False, timeout=1)
+            # 5s windows: probe bursts are ~300ms, 5x fewer promiscuous
+            # toggles in the kernel log
+            sniff(iface=IFACE, prn=prn, store=False, timeout=5)
         except Exception:
             time.sleep(1)
 
@@ -276,7 +280,18 @@ def main():
     signal.signal(signal.SIGINT, guarded)
 
     log(f"autosense: iface={IFACE} ssid={SSID} upstream={UP_SSID} idle={IDLE_SECS}s dry={DRY}")
+    paused = False
     while True:
+        # pause file = portal is in manual mode; hold whatever mode it set
+        if PAUSE_FILE.exists():
+            if not paused:
+                log("auto paused — holding current mode")
+                paused = True
+            time.sleep(TICK)
+            continue
+        if paused:
+            log("auto resumed")
+            paused = False
         eth = eth_ok()
         if not eth:
             down_ticks += 1

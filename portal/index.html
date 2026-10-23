@@ -3,470 +3,429 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>rtl8192eu portal</title>
-<link href="https://cdn.jsdelivr.net/npm/daisyui@5/daisyui.css" rel="stylesheet">
+<title>rtl8192eu · portal</title>
+<link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css"/>
 <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 <style>
-  body { font-family: ui-sans-serif, system-ui, sans-serif; }
-  .card { border: 1px solid var(--color-base-300); }
-  .mono { font-family: ui-monospace, monospace; font-size: .85rem; }
-  #frames td, #frames th { white-space: nowrap; }
-  details > summary { cursor: pointer; }
+  .mono { font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .num { font-variant-numeric: tabular-nums; }
+  .mode-card { cursor: pointer; border-width: 2px; transition: border-color .15s, background .15s; }
+  .mode-card.current { border-color: var(--color-primary); background: color-mix(in oklab, var(--color-primary) 10%, transparent); }
+  .mode-card input { pointer-events: none; }
+  details > summary { list-style: none; cursor: pointer; }
+  details > summary::-webkit-details-marker { display: none; }
+  details[open] .chev { transform: rotate(90deg); }
+  .chev { transition: transform .15s; }
+  .adv-row:hover { background: color-mix(in oklab, var(--color-base-content) 8%, transparent); }
 </style>
 </head>
-<body class="bg-base-200 min-h-screen">
-<div class="navbar bg-base-100 shadow">
-  <div class="flex-1 gap-3 px-2">
-    <span class="text-lg font-bold">rtl8192eu<span class="text-accent">portal</span></span>
-    <span id="drvver" class="badge badge-ghost badge-sm"></span>
-    <span id="modebadge" class="badge badge-primary"></span>
+<body class="min-h-screen bg-base-200">
+
+<!-- header -->
+<header class="sticky top-0 z-10 bg-base-100/95 backdrop-blur border-b border-base-300">
+  <div class="max-w-5xl mx-auto px-4 h-14 flex items-center gap-3">
+    <span class="text-base font-semibold tracking-tight">rtl8192eu</span>
+    <span id="drvver" class="badge badge-sm badge-ghost mono"></span>
+    <span class="flex-1"></span>
+    <span id="status-pill" class="badge badge-sm badge-outline mono">
+      <span id="status-dot" class="w-2 h-2 rounded-full bg-base-300"></span>
+      <span id="status-text">connecting…</span>
+    </span>
   </div>
-  <div class="flex-none">
-    <ul class="menu menu-horizontal px-1 gap-1">
-      <li><a onclick="tab('dash')" id="tablink-dash" class="active">Dashboard</a></li>
-      <li><a onclick="tab('modes')" id="tablink-modes">Modes</a></li>
-      <li><a onclick="tab('monitor')" id="tablink-monitor">Monitor</a></li>
-    </ul>
-  </div>
-</div>
+</header>
 
-<div class="p-4 max-w-6xl mx-auto space-y-4">
-  <div id="toast" class="toast toast-top toast-end z-50"></div>
+<main class="max-w-5xl mx-auto px-4 py-6 space-y-6">
 
-  <!-- ============ DASHBOARD ============ -->
-  <div id="page-dash" class="space-y-4">
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div class="card bg-base-100 shadow">
-        <div class="card-body p-4">
-          <p class="text-xs opacity-60">Interface</p>
-          <h2 class="card-title" id="d-iface">—</h2>
-          <p class="text-xs opacity-60">IP <span id="d-ip" class="mono"></span> · <span id="d-mac"></span></p>
+  <!-- status row: the two things a user actually wants first -->
+  <section class="grid md:grid-cols-2 gap-4">
+    <div class="card bg-base-100 border border-base-300">
+      <div class="card-body py-4">
+        <h2 class="card-title text-sm opacity-60">Wireless network</h2>
+        <div class="flex items-center gap-3 flex-wrap">
+          <span id="ssid" class="text-2xl font-semibold mono">—</span>
+          <span id="radio-chip" class="badge badge-ghost mono">—</span>
+          <span class="flex-1"></span>
+          <span id="uplink" class="text-xs opacity-50"></span>
         </div>
-      </div>
-      <div class="card bg-base-100 shadow">
-        <div class="card-body p-4">
-          <p class="text-xs opacity-60">Access point</p>
-          <h2 class="card-title" id="d-ssid">—</h2>
-          <p class="text-sm">ch <span id="d-chan">—</span> · country <span id="d-country">—</span></p>
-        </div>
-      </div>
-      <div class="card bg-base-100 shadow">
-        <div class="card-body p-4">
-          <p class="text-xs opacity-60">Received signal</p>
-          <h2 class="card-title" id="d-rssi">—</h2>
-          <progress class="progress progress-primary w-full" id="d-rssibar" value="0" max="100"></progress>
-        </div>
-      </div>
-      <div class="card bg-base-100 shadow">
-        <div class="card-body p-4">
-          <p class="text-xs opacity-60">Connected clients</p>
-          <h2 class="card-title" id="d-clients">—</h2>
-          <p class="text-xs opacity-60" id="d-clients-hint"></p>
-        </div>
+        <div id="signal-bar" class="progress progress-primary w-full mt-1" style="height: 4px; width: 0%;"></div>
+        <div id="signal-meta" class="text-xs opacity-50 mt-1 mono"></div>
       </div>
     </div>
-
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div class="card bg-base-100 shadow"><div class="card-body p-4">
-        <p class="text-xs opacity-60">↓ received</p><h2 class="card-title" id="d-rx">—</h2></div></div>
-      <div class="card bg-base-100 shadow"><div class="card-body p-4">
-        <p class="text-xs opacity-60">↑ sent</p><h2 class="card-title" id="d-tx">—</h2></div></div>
-      <div class="card bg-base-100 shadow"><div class="card-body p-4">
-        <p class="text-xs opacity-60">packets rx / tx</p><h2 class="card-title" id="d-pkts">—</h2></div></div>
-      <div class="card bg-base-100 shadow"><div class="card-body p-4">
-        <p class="text-xs opacity-60">tx power offset</p><h2 class="card-title" id="d-txpwr">—</h2></div></div>
-    </div>
-
-    <div class="card bg-base-100 shadow">
-      <div class="card-body">
-        <h3 class="card-title text-base">Clients</h3>
-        <div class="overflow-x-auto">
-          <table class="table table-sm">
-            <thead><tr><th>MAC</th><th>↓ pkts</th><th>↑ pkts</th><th>↓ bytes</th><th>↑ bytes</th><th>rate</th><th>signal</th><th>auth</th></tr></thead>
-            <tbody id="d-clients-tbl"><tr><td colspan="7" class="opacity-50">no clients</td></tr></tbody>
-          </table>
+    <div class="card bg-base-100 border border-base-300">
+      <div class="card-body py-4">
+        <div class="flex items-center gap-2">
+          <h2 class="card-title text-sm opacity-60">Devices on the network</h2>
+          <span class="flex-1"></span>
+          <button id="pause-auto-btn" class="btn btn-ghost btn-xs">pause auto</button>
         </div>
+        <div class="flex items-center gap-3 mt-1">
+          <span id="client-count" class="text-2xl font-semibold num">0</span>
+          <span class="text-xs opacity-50">connected</span>
+        </div>
+        <div id="auto-note" class="text-xs opacity-50 mt-1"></div>
+        <div id="client-empty" class="text-xs opacity-40 mt-2">AP is asleep — a device looking for the network wakes it up.</div>
+        <div id="client-list" class="hidden mt-2 space-y-1 max-h-28 overflow-auto pr-1"></div>
       </div>
     </div>
+  </section>
 
-    <div class="card bg-base-100 shadow">
-      <div class="card-body">
-        <h3 class="card-title text-base">Driver</h3>
-        <p class="mono text-sm opacity-80" id="d-fw"></p>
+  <!-- network settings -->
+  <section class="card bg-base-100 border border-base-300">
+    <div class="card-body">
+      <div class="flex items-center gap-2">
+        <h2 class="card-title text-base">Network settings</h2>
+        <span id="ap-state" class="badge badge-sm badge-ghost mono"></span>
       </div>
+      <form id="net-form" class="grid md:grid-cols-2 gap-4">
+        <label class="form-control">
+          <span class="label-text text-xs opacity-60">Network name (SSID)</span>
+          <input id="f-ssid" class="input input-sm mono" autocomplete="off">
+        </label>
+        <label class="form-control">
+          <span class="label-text text-xs opacity-60">Passphrase <span class="opacity-40">— leave blank to keep current</span></span>
+          <input id="f-pass" type="password" class="input input-sm mono" autocomplete="new-password">
+        </label>
+        <label class="form-control">
+          <span class="label-text text-xs opacity-60">Channel</span>
+          <select id="f-chan" class="select select-sm mono"></select>
+        </label>
+        <div class="grid grid-cols-2 gap-4">
+          <label class="form-control">
+            <span class="label-text text-xs opacity-60">Country</span>
+            <input id="f-country" class="input input-sm mono uppercase" maxlength="2" placeholder="IN">
+          </label>
+          <label class="form-control">
+            <span class="label-text text-xs opacity-60">Max clients</span>
+            <input id="f-maxsta" type="number" min="1" max="64" class="input input-sm num">
+          </label>
+        </div>
+        <div class="md:col-span-2 flex items-center gap-3">
+          <button class="btn btn-primary btn-sm" type="submit">Save network settings</button>
+          <span class="text-xs opacity-40">Saves and restarts the access point — devices reconnect on their own.</span>
+        </div>
+      </form>
     </div>
-  </div>
+  </section>
 
-  <!-- ============ MODES ============ -->
-  <div id="page-modes" class="hidden space-y-4">
-    <div class="grid md:grid-cols-3 gap-4">
-      <!-- AP -->
-      <div class="card bg-base-100 shadow">
-        <div class="card-body">
-          <div class="flex justify-between items-center">
-            <h3 class="card-title">Access Point</h3>
-            <button class="btn btn-sm btn-primary" onclick="modeSwitch('ap')">Switch to AP</button>
+  <!-- mode -->
+  <section class="card bg-base-100 border border-base-300">
+    <div class="card-body">
+      <div class="flex items-center gap-2 flex-wrap">
+        <h2 class="card-title text-base">Mode</h2>
+        <span class="badge badge-sm badge-ghost mono" id="auto-badge">auto on</span>
+        <span class="text-xs opacity-40">auto switches to AP when a device probes, and fails over to your other Wi-Fi when ethernet drops</span>
+      </div>
+      <div id="mode-grid" class="grid md:grid-cols-3 gap-3 mt-2">
+        <label class="card mode-card bg-base-200 border-base-300">
+          <input type="radio" name="mode" value="ap">
+          <div class="card-body py-3">
+            <span class="font-medium">Access point</span>
+            <span class="text-xs opacity-60">Broadcasts your network and serves devices on it.</span>
           </div>
-          <p class="text-sm opacity-70" id="m-ap-note"></p>
-          <form class="space-y-2" onsubmit="netApply(event)">
-            <label class="form-control w-full"><span class="label-text mb-1">SSID</span>
-              <input class="input input-bordered w-full" id="ap-ssid" maxlength="32"></label>
-            <label class="form-control w-full"><span class="label-text mb-1">Passphrase (leave blank to keep)</span>
-              <input class="input input-bordered w-full" id="ap-pass" type="password" minlength="8"></label>
-            <div class="grid grid-cols-2 gap-2">
-              <label class="form-control w-full"><span class="label-text mb-1">Channel</span>
-                <select class="select select-bordered w-full" id="ap-chan"></select></label>
-              <label class="form-control w-full"><span class="label-text mb-1">Country</span>
-                <input class="input input-bordered w-full" id="ap-country" maxlength="2" placeholder="IN"></label>
+        </label>
+        <label class="card mode-card bg-base-200 border-base-300">
+          <input type="radio" name="mode" value="station">
+          <div class="card-body py-3">
+            <span class="font-medium">Station</span>
+            <span class="text-xs opacity-60">Joins another network as a client.</span>
+            <div id="station-fields" class="hidden mt-2 space-y-2">
+              <div class="flex gap-2">
+                <input id="f-scan-ssid" class="input input-xs mono flex-1" placeholder="Network to join" autocomplete="off">
+                <button type="button" id="f-scan" class="btn btn-ghost btn-xs">scan</button>
+              </div>
+              <input id="f-scan-pass" type="password" class="input input-xs mono w-full" placeholder="Password">
+              <div id="scan-hint" class="text-xs opacity-40 max-h-32 overflow-auto"></div>
             </div>
-            <label class="form-control w-full"><span class="label-text mb-1">Max clients</span>
-              <input class="input input-bordered w-full" id="ap-maxsta" type="number" min="1" max="255"></label>
-            <button class="btn btn-wide btn-warning" onclick="return true">Apply (restarts hostapd, clients drop)</button>
-          </form>
-        </div>
+          </div>
+        </label>
+        <label class="card mode-card bg-base-200 border-base-300">
+          <input type="radio" name="mode" value="monitor">
+          <div class="card-body py-3">
+            <span class="font-medium">Monitor</span>
+            <span class="text-xs opacity-60">Listens to raw air traffic; serves no connections.</span>
+          </div>
+        </label>
       </div>
-      <!-- Station -->
-      <div class="card bg-base-100 shadow">
-        <div class="card-body">
-          <div class="flex justify-between items-center">
-            <h3 class="card-title">Station (client)</h3>
-            <button class="btn btn-sm" onclick="modeSwitch('station')">Switch to station</button>
-          </div>
-          <p class="text-sm opacity-70">Join an existing network. Adapter switches mode first — any AP you're running on it stops.</p>
-          <div class="join w-full">
-            <select class="select select-bordered join-item w-full" id="st-scan" disabled><option>no scan yet</option></select>
-            <button class="btn btn-secondary join-item" onclick="doScan()">Scan</button>
-          </div>
-          <label class="form-control w-full mt-2"><span class="label-text mb-1">Passphrase (blank = open network)</span>
-            <input class="input input-bordered w-full" id="st-pass" type="password"></label>
-          <button class="btn btn-wide" onclick="stationConnect()">Connect</button>
-        </div>
-      </div>
-      <!-- Monitor -->
-      <div class="card bg-base-100 shadow">
-        <div class="card-body">
-          <div class="flex justify-between items-center">
-            <h3 class="card-title">Monitor (sniff)</h3>
-            <button class="btn btn-sm btn-error" onclick="modeSwitch('monitor')">Switch to monitor</button>
-          </div>
-          <p class="text-sm opacity-70">Captures every frame in the air around the antenna — beacons, probes, handshakes, data. Nothing is sent; the radio only listens.</p>
-          <p class="text-sm" id="m-mon-state"></p>
-          <button class="btn btn-wide" onclick="tab('monitor')">Open live capture →</button>
-        </div>
+      <div class="mt-3 flex items-center gap-3">
+        <button id="mode-apply" class="btn btn-neutral btn-sm" disabled>Select a mode</button>
+        <span id="mode-busy" class="text-xs opacity-50 mono"></span>
       </div>
     </div>
-    <div class="alert alert-info text-sm">Mode switching brings the radio down for a couple of seconds and changes what this adapter does on your network. Nothing here touches the driver or kernel — it's a separate process you can kill any time.</div>
-  </div>
+  </section>
 
-  <!-- ============ MONITOR ============ -->
-  <div id="page-monitor" class="hidden space-y-4">
-    <div class="flex flex-wrap items-center gap-3">
-      <span id="mon-state" class="badge badge-ghost">idle</span>
-      <span class="opacity-60 text-sm" id="mon-summary"></span>
-      <label class="checkbox w-full"><input type="checkbox" id="mon-auto" checked onchange="monTimer()" >auto-refresh</label>
-      <button class="btn btn-sm btn-ghost" onclick="stopMon()">stop capture</button>
-    </div>
-    <div class="card bg-base-100 shadow">
-      <div class="card-body">
-        <div class="overflow-x-auto">
-          <table class="table table-sm" id="frames">
-            <thead><tr><th>time</th><th>type</th><th>subtype</th><th>addr1</th><th>addr2</th><th>addr3</th><th>ch</th><th>rate</th><th>sig</th><th>len</th></tr></thead>
-            <tbody id="mon-rows"><tr><td colspan="10" class="opacity-50">switch the adapter to monitor mode to start</td></tr></tbody>
-          </table>
-        </div>
+  <!-- monitor frames -->
+  <section id="mon-section" class="card bg-base-100 border border-base-300" style="display:none;">
+    <div class="card-body">
+      <h2 class="card-title text-base">Air traffic <span class="text-xs opacity-40 font-normal">— last frames seen in monitor mode</span></h2>
+      <div id="mon-rows" class="overflow-x-auto">
+        <table class="table table-sm mono text-xs">
+          <thead><tr><th>type</th><th>from</th><th>to</th><th>info</th></tr></thead>
+          <tbody id="mon-tbody"><tr><td colspan="4" class="opacity-40">no frames yet</td></tr></tbody>
+        </table>
       </div>
     </div>
-  </div>
+  </section>
 
-  <!-- ============ ADVANCED ============ -->
-  <div class="max-w-6xl mx-auto px-4 pb-8">
-    <details class="card bg-base-100 shadow" ontoggle="if (this.open) loadAdv()">
-      <summary class="card-body cursor-pointer py-3">
-        <h3 class="card-title">Advanced — raw driver knobs (procfs playground + register access)</h3>
-        <span class="badge badge-ghost">expert</span>
-      </summary>
-      <div class="card-body border-t">
-        <p class="text-sm opacity-70">Every entry the driver exposes under <span class="mono" id="adv-root"></span>. Read is always safe; writes to marked entries are live and can change radio behaviour. <span class="text-error">Register writes can knock the radio out — reboot or driver reload may be needed to recover.</span></p>
-        <div class="join w-full max-w-md">
-          <input class="input input-bordered join-item w-full" id="adv-q" placeholder="filter entries…" oninput="advFilter()">
-          <span class="badge badge-slate join-item" id="adv-count"></span>
-        </div>
-        <div class="grid md:grid-cols-3 gap-2 mt-3" id="adv-list"></div>
-
-        <div class="divider">register access</div>
-        <div class="grid md:grid-cols-2 gap-4">
-          <div class="form-control">
-            <span class="label-text mb-1">read register</span>
-            <div class="join w-full max-w-sm">
-              <input class="input input-bordered join-item mono" id="reg-addr" placeholder="0x424">
-              <select class="select select-bordered join-item" id="reg-len"><option>1</option><option selected>2</option><option>4</option></select>
-              <button class="btn btn-secondary join-item" onclick="regRead()">read</button>
-            </div>
-            <pre class="mono mt-2 bg-base-200 p-2 rounded-box" id="reg-out">—</pre>
-          </div>
-          <div class="form-control">
-            <span class="label-text mb-1">write register <span class="text-error">(dangerous)</span></span>
-            <div class="join w-full max-w-sm">
-              <input class="input input-bordered join-item mono" id="reg-waddr" placeholder="0x424">
-              <input class="input input-bordered join-item mono" id="reg-wval" placeholder="0x1234">
-              <select class="select select-bordered join-item" id="reg-wlen"><option>1</option><option selected>2</option><option>4</option></select>
-              <button class="btn btn-error join-item" onclick="regWrite()">write</button>
-            </div>
-            <p class="text-xs opacity-60 mt-1">You will be asked to type <span class="mono">DANGER</span> to confirm.</p>
-          </div>
-        </div>
+  <!-- advanced -->
+  <details class="card bg-base-100 border border-base-300">
+    <summary class="card-body py-4">
+      <h2 class="card-title text-base">Advanced</h2>
+      <span class="text-xs opacity-40">driver internals — procfs entries and raw register access</span>
+      <span class="chev opacity-40 ml-auto">▶</span>
+    </summary>
+    <div class="card-body pt-0">
+      <div class="flex items-center gap-2 mb-2">
+        <input id="adv-filter" class="input input-sm input-bordered max-w-xs" placeholder="filter entries…">
+        <span id="adv-count" class="text-xs opacity-40 mono"></span>
       </div>
-    </details>
-  </div>
-</div>
+      <div id="adv-rows" class="grid md:grid-cols-2 gap-1 max-h-96 overflow-auto pr-1"></div>
+      <div class="divider my-4"></div>
+      <h3 class="font-medium text-sm">Register read / write</h3>
+      <div class="flex flex-wrap items-end gap-3 mt-2">
+        <label class="form-control">
+          <span class="label-text text-xs opacity-60">Offset (hex)</span>
+          <input id="reg-offset" class="input input-sm mono w-24" value="4d">
+        </label>
+        <label class="form-control">
+          <span class="label-text text-xs opacity-60">Size</span>
+          <select id="reg-size" class="select select-sm w-20"><option>1</option><option>2</option><option>4</option></select>
+        </label>
+        <label class="form-control">
+          <span class="label-text text-xs opacity-60">Value (hex, write only)</span>
+          <input id="reg-value" class="input input-sm mono w-28" value="82">
+        </label>
+        <button id="reg-read" class="btn btn-sm">Read</button>
+        <button id="reg-write" class="btn btn-sm btn-error">Write</button>
+        <span id="reg-result" class="mono text-sm"></span>
+      </div>
+      <p class="text-xs opacity-40 mt-2">Writing the LED register (0x4d) is how the driver blinks it; other registers are not documented — poking blindly can hang the radio.</p>
+    </div>
+  </details>
+
+  <footer class="text-center text-xs opacity-40 pb-6">
+    runs as a separate process over the driver's procfs — killing it never touches the radio
+  </footer>
+</main>
+
+<div id="toast-root" class="toast toast-end toast-bottom z-50"></div>
 
 <script>
-let curTab = "dash", dashTimer = null, monTimerId = null;
-const $ = id => document.getElementById(id);
-
-async function api(path, opts) {
-  let r;
-  try {
-    r = await fetch(path, opts);
-  } catch (e) {
-    // browsers that inherit embedded creds from the document URL — retry absolute
-    r = await fetch(location.protocol + "//" + location.host + path, opts);
+// Chrome blocks fetch() from pages with embedded URL credentials —
+// drop the userinfo from the address bar; the browser keeps the
+// auth session for same-origin requests
+if (location.username) history.replaceState(null, "", location.pathname + location.search + location.hash);
+const BASE = location.protocol === "file:" ? "http://127.0.0.1:8080" : "";
+async function api(path, opts = {}) {
+  for (let i = 0; ; i++) {
+    const r = await fetch(BASE + path, { headers: { "Content-Type": "application/json" }, ...opts });
+    if (r.status === 401 && i === 0) { location.reload(); throw new Error("auth"); }
+    if (!r.ok) { const b = await r.json().catch(() => ({})); throw new Error(b.detail || ("http " + r.status)); }
+    return r.json();
   }
-  if (r.status === 401) throw new Error("unauthorized");
-  if (!r.ok) {
-    let m = r.statusText;
-    try { m = (await r.json()).detail || m } catch {}
-    throw new Error(m);
-  }
-  return r.json();
 }
-function toast(msg, kind) {
+function toast(msg, err = false) {
   const d = document.createElement("div");
-  d.className = `alert alert-${kind || "info"} alert-sm`;
+  d.className = "alert " + (err ? "alert-error" : "alert-success") + " text-sm";
   d.textContent = msg;
-  $("toast").appendChild(d);
-  setTimeout(() => d.remove(), 5000);
+  document.getElementById("toast-root").appendChild(d);
+  setTimeout(() => d.remove(), 4000);
 }
-function human(n) {
-  if (n === undefined || n === null) return "—";
-  n = +n;
-  for (const u of ["B", "KB", "MB", "GB", "TB"]) { if (n < 1024) return n.toFixed(n < 10 && u !== "B" ? 1 : 0) + " " + u; n /= 1024; }
-  return n.toFixed(1) + " PB";
+const $ = (id) => document.getElementById(id);
+
+async function renderNetForm() {
+  try {
+    const n = await api("/api/net");
+    const h = n.hostapd || {};
+    if (!document.activeElement || !document.activeElement.closest?.("#net-form")) {
+      $("f-ssid").value = h.ssid || "";
+      $("f-chan").value = String(h.channel || "11");
+      $("f-country").value = h.country_code || "";
+      $("f-maxsta").value = h.max_num_sta || 8;
+    }
+  } catch (e) { if (e.message !== "auth") {} }
 }
-function tab(t) {
-  curTab = t;
-  for (const x of ["dash", "modes", "monitor"]) {
-    $("page-" + x).classList.toggle("hidden", x !== t);
-    $("tablink-" + x).classList.toggle("active", x === t);
+
+async function render() {
+  let s;
+  try { s = await api("/api/status"); }
+  catch (e) {
+    if (e.message === "auth") return;
+    $("status-dot").className = "w-2 h-2 rounded-full bg-error";
+    $("status-text").textContent = "offline";
+    return;
   }
-  if (t === "dash") { loadDash(); clearInterval(dashTimer); dashTimer = setInterval(loadDash, 5000); }
-  else clearInterval(dashTimer);
-  if (t === "monitor") { loadMon(); monTimer(); }
-  else if (monTimerId) { clearInterval(monTimerId); monTimerId = null; }
-  if (t === "modes") loadNet();
+  $("status-dot").className = "w-2 h-2 rounded-full bg-success";
+  $("status-text").textContent = s.mode;
+  $("drvver").textContent = (s.driver || "").split(" ").slice(0, 2).join(" ");
+
+  // wireless card
+  const ap = s.ap_info || {};
+  $("ssid").textContent = ap.ssid || (s.mode === "station" ? "station" : "—");
+  const chip = $("radio-chip");
+  if (s.mode === "ap") { chip.textContent = "access point"; chip.className = "badge badge-primary mono"; }
+  else if (s.mode === "station") { chip.textContent = "client"; chip.className = "badge badge-info mono"; }
+  else { chip.textContent = "monitor"; chip.className = "badge badge-ghost mono"; }
+  const rssi = s.rx_signal?.rssi;
+  if (rssi != null && rssi > -95) {
+    $("signal-bar").style.width = Math.max(4, (100 - (rssi + 90)) * 10) + "%";
+    $("signal-meta").textContent = rssi + " dBm";
+  } else {
+    $("signal-bar").style.width = "0%";
+    $("signal-meta").textContent = s.mode === "station" ? "no signal" : "no signal in monitor";
+  }
+  $("uplink").textContent = s.ip ? "gateway ip " + s.ip : "";
+  $("ap-state").textContent = s.mode === "ap" ? "AP running" : "AP off";
+
+  // clients
+  const c = s.clients || [];
+  $("client-count").textContent = c.length;
+  $("client-empty").classList.toggle("hidden", c.length > 0);
+  $("client-list").classList.toggle("hidden", c.length === 0);
+  $("client-list").innerHTML = c.map(x =>
+    `<div class="flex items-center gap-2 text-xs mono"><span>${x.mac || ""}</span><span class="opacity-50">${x.signal != null ? x.signal + " dBm" : ""}</span><span class="flex-1"></span><span class="num">${((x.rx_bytes || 0) / 1048576).toFixed(1)} MB ↓ ${x.rate || ""} Mbps</span></div>`
+  ).join("");
+
+  // mode cards
+  document.querySelectorAll(".mode-card").forEach(card => {
+    card.classList.toggle("current", card.querySelector("input").value === s.mode);
+  });
+
+  // monitor frames
+  $("mon-section").style.display = s.mode === "monitor" ? "" : "none";
+  if (s.mode === "monitor") renderFrames();
+  renderNetForm();
+
+  // autosense badge (manual switches pause the daemon server-side)
+  api("/api/autosense").then(a => {
+    $("auto-badge").textContent = a.paused ? "auto paused" : "auto on";
+    $("auto-badge").className = "badge badge-sm mono " + (a.paused ? "badge-warning" : "badge-ghost");
+    $("auto-note").textContent = a.paused ? "auto is paused — manual mode is stable; resume when you are done" : "";
+    $("pause-auto-btn").textContent = a.paused ? "resume auto" : "pause auto";
+  }).catch(() => {});
 }
 
-/* ---------- dashboard ---------- */
-async function loadDash() {
-  try {
-    const s = await api("/api/status");
-    $("drvver").textContent = s.driver || "";
-    const mb = $("modebadge");
-    mb.textContent = (s.mode || "?").toUpperCase();
-    mb.className = "badge " + (s.mode === "ap" ? "badge-success" : s.mode === "monitor" ? "badge-error" : s.mode === "station" ? "badge-info" : "badge-ghost");
-    $("d-iface").textContent = s.iface;
-    $("d-ip").textContent = s.ip || "—";
-    $("d-ssid").textContent = s.ap_info.ssid || "—";
-    $("d-chan").textContent = s.ap_info.channel || "—";
-    $("d-country").textContent = s.country || "—";
-    $("d-txpwr").textContent = (s.tx_power_offset || "0") + " dBm";
-    const rssi = s.rx_signal.rssi;
-    if (rssi !== undefined) {
-      $("d-rssi").textContent = rssi + " dBm";
-      $("d-rssibar").value = Math.max(0, Math.min(100, (rssi + 90) / 90 * 100));
-    }
-    $("d-rx").textContent = human(s.stats?.rx_bytes);
-    $("d-tx").textContent = human(s.stats?.tx_bytes);
-    $("d-pkts").textContent = ((s.stats?.rx_packets||0).toLocaleString() + " / " + (s.stats?.tx_packets||0).toLocaleString());
-    $("d-fw").textContent = s.fw_info || "";
-    const tb = $("d-clients-tbl");
-    $("d-clients").textContent = s.clients.length;
-    $("d-clients-hint").textContent = s.mode === "ap" ? "on this AP" : s.mode === "station" ? "(station mode)" : "";
-    tb.innerHTML = s.clients.length ? s.clients.map(c =>
-      `<tr><td class="mono">${c.mac}</td><td>${c.rx_pkts?.toLocaleString() ?? "—"}</td><td>${c.tx_pkts?.toLocaleString() ?? "—"}</td><td>${human(c.rx_bytes)}</td><td>${human(c.tx_bytes)}</td><td>${c.rx_tp ? (c.rx_tp/1000).toFixed(1)+" Mb/s" : "—"}</td><td>${c.rssi ? "-"+c.rssi+" dBm" : "—"}</td><td>${c.wpa ? "wpa2" : "open"}</td></tr>`
-    ).join("") : `<tr><td colspan="8" class="opacity-50">no clients</td></tr>`;
-  } catch (e) { toast("dashboard: " + e.message, "error"); }
+async function renderFrames() {
+  let m;
+  try { m = await api("/api/monitor/frames"); } catch { return; }
+  const fr = (m.frames || []).slice(-12).reverse();
+  $("mon-tbody").innerHTML = fr.length ? fr.map(f =>
+    `<tr><td>${f.type || ""}${f.subtype ? "/" + f.subtype : ""}</td><td>${f.a2 || ""}</td><td>${f.a1 || ""}</td><td>${f.info || ""}</td></tr>`
+  ).join("") : `<tr><td colspan="4" class="opacity-40">no frames yet</td></tr>`;
 }
 
-/* ---------- modes ---------- */
-let netData = null;
-async function loadNet() {
+async function renderAdvanced() {
+  let a;
+  try { a = await api("/api/proc"); } catch { return; }
+  const entries = Object.entries(a || {});
+  const f = $("adv-filter").value.toLowerCase();
+  const rows = entries.filter(([k]) => !f || k.toLowerCase().includes(f));
+  $("adv-count").textContent = rows.length + " / " + entries.length + " entries";
+  $("adv-rows").innerHTML = rows.slice(0, 200).map(([k, w]) =>
+    `<button class="adv-row btn btn-ghost btn-xs justify-start h-auto py-1 mono text-xs" data-key="${k}">${k}${w ? " ✎" : ""}</button>`
+  ).join("");
+  $("adv-rows").querySelectorAll(".adv-row").forEach(b => b.onclick = async () => {
+    try {
+      const d = await api("/api/proc/read?name=" + encodeURIComponent(b.dataset.key));
+      toast(b.dataset.key + ": " + String(d.value ?? d).slice(0, 120));
+    } catch (e) { toast(e.message, true); }
+  });
+}
+
+// mode switching
+document.querySelectorAll('input[name="mode"]').forEach(r => r.addEventListener("change", () => {
+  const sel = document.querySelector('input[name="mode"]:checked');
+  $("mode-apply").disabled = !sel;
+  $("mode-apply").textContent = sel ? `Switch to ${sel.value}` : "Select a mode";
+  $("station-fields").classList.toggle("hidden", sel?.value !== "station");
+}));
+$("mode-apply").onclick = async () => {
+  const sel = document.querySelector('input[name="mode"]:checked');
+  if (!sel) return;
+  const m = sel.value;
+  $("mode-apply").disabled = true;
+  $("mode-busy").textContent = "switching… (a few seconds)";
   try {
-    netData = await api("/api/net");
-    const h = netData.hostapd;
-    if (h) {
-      $("ap-ssid").value = h.ssid || "";
-      $("ap-country").value = h.country_code || "";
-      $("ap-maxsta").value = h.max_num_sta || 8;
-      const sel = $("ap-chan");
-      sel.innerHTML = "";
-      for (let c = 1; c <= 13; c++) {
-        const o = document.createElement("option");
-        o.value = c; o.textContent = c + (c === (h.channel|0) ? "  ← current" : "");
-        sel.appendChild(o);
-      }
-      sel.value = h.channel | 0 || 1;
-      $("m-ap-note").textContent = `hostapd.conf found at ${h._path}. Applying restarts hostapd — all clients reconnect.`;
-    } else {
-      $("m-ap-note").innerHTML = netData.tools.hostapd
-        ? "no hostapd.conf found on this machine yet."
-        : "hostapd is not installed here. <span class='mono'>apt install hostapd dnsmasq</span> (or your distro's equivalent), then create /etc/hostapd/hostapd.conf.";
+    if (m === "station" && $("f-scan-ssid").value.trim()) {
+      await api("/api/station", { method: "POST", body: JSON.stringify({
+        ssid: $("f-scan-ssid").value.trim(), passphrase: $("f-scan-pass").value, confirm: "CONNECT" })});
+      $("mode-busy").textContent = "saved network, switching…";
     }
-    if (!netData.tools.wpa_supplicant)
-      $("m-mon-state").textContent = "";
-  } catch (e) { toast("net: " + e.message, "error"); }
-}
-async function netApply(ev) {
-  ev && ev.preventDefault();
-  if (!confirm("Restart hostapd with the new settings? Connected clients will drop.")) return;
-  const body = { ssid: $("ap-ssid").value, channel: $("ap-chan").value,
-    country_code: $("ap-country").value, max_num_sta: $("ap-maxsta").value, confirm: "RESTART" };
-  if ($("ap-pass").value) body.passphrase = $("ap-pass").value;
-  try {
-    const r = await api("/api/net", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(body) });
-    toast("applied — hostapd " + r.hostapd, "success"); loadDash();
-  } catch (e) { toast(e.message, "error"); }
-}
-async function doScan() {
-  const sel = $("st-scan");
-  sel.innerHTML = "<option>scanning…</option>"; sel.disabled = true;
+    await api("/api/mode", { method: "POST", body: JSON.stringify({ mode: m, confirm: "SWITCH" }) });
+    toast("switched to " + m + " — auto mode paused");
+  } catch (e) { toast(e.message, true); }
+  $("mode-busy").textContent = "";
+  render();
+};
+
+// wifi scan for station mode
+$("f-scan").onclick = async () => {
+  $("scan-hint").innerHTML = "scanning…";
   try {
     const nets = await api("/api/scan");
-    sel.innerHTML = ""; sel.disabled = false;
-    if (!nets.length) { sel.innerHTML = "<option>nothing found</option>"; return; }
-    for (const n of nets) {
-      const o = document.createElement("option");
-      o.value = n.ssid; o.textContent = `${n.ssid}  ${n.signal}dBm @ ${n.freq}MHz`;
-      sel.appendChild(o);
-    }
-  } catch (e) { toast("scan: " + e.message, "error"); sel.disabled = false; sel.innerHTML = "<option>no scan yet</option>"; }
-}
-async function stationConnect() {
-  const ssid = $("st-scan").value;
-  if (!ssid || ssid.includes("scan")) return toast("pick a network from the scan list first", "warning");
-  if (!confirm(`Switch ${ssid ? "to station mode" : ""} and connect to "${ssid}"?`)) return;
-  try {
-    await api("/api/station", { method: "POST", headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({ ssid, passphrase: $("st-pass").value, confirm: "CONNECT" }) });
-    toast("wpa_supplicant started, associating…", "success");
-  } catch (e) { toast(e.message, "error"); }
-}
-async function modeSwitch(mode) {
-  if (!confirm(`Switch the radio to ${mode.toUpperCase()} mode?\n\nThe radio goes down for a couple of seconds. If you're running this portal on the same machine you'd lose connectivity on this adapter during the switch.`)) return;
-  try {
-    const r = await api("/api/mode", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ mode, confirm: "SWITCH" }) });
-    toast("now: " + r.mode + " — " + r.log.join(", "), "success");
-    loadDash();
-  } catch (e) { toast(e.message, "error"); }
-}
+    $("scan-hint").innerHTML = (nets || []).slice(0, 12).map(n =>
+      `<div class="flex gap-2 scan-net cursor-pointer" data-ssid="${n.ssid}"><span class="flex-1">${n.ssid}</span><span class="opacity-50">${n.signal ?? ""} dBm · ch ${n.freq ? Math.round((n.freq - 2407) / 5) : ""}</span></div>`
+    ).join("") || "no networks found";
+    $("scan-hint").querySelectorAll(".scan-net").forEach(el => el.onclick = () => {
+      $("f-scan-ssid").value = el.dataset.ssid;
+    });
+  } catch (e) { $("scan-hint").textContent = e.message; }
+};
 
-/* ---------- monitor ---------- */
-async function loadMon() {
+// auto pause/resume
+$("pause-auto-btn").onclick = async () => {
   try {
-    const m = await api("/api/monitor/frames");
-    const st = $("mon-state");
-    st.textContent = m.mode === "monitor" ? (m.active ? "capturing" : "starting…") : "adapter in " + m.mode + " mode — switch to monitor first";
-    st.className = "badge " + (m.active ? "badge-success" : "badge-ghost");
-    $("m-mon-state").textContent = st.textContent;
-    const rows = [...m.frames].reverse().slice(0, 40);
-    $("mon-rows").innerHTML = rows.length ? rows.map(f =>
-      `<tr><td class="mono">${f.t}</td><td>${f.type}</td><td>${f.subtype}</td><td class="mono">${f.a1}</td><td class="mono">${f.a2}</td><td class="mono">${f.a3}</td><td>${f.ch}</td><td>${f.rate}</td><td>${f.sig}</td><td>${f.len}</td></tr>`
-    ).join("") : `<tr><td colspan="10" class="opacity-50">no frames yet…</td></tr>`;
-    $("mon-summary").textContent = Object.entries(m.counts).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([k,v])=>`${k}: ${v}`).join("   ");
-  } catch (e) { toast("monitor: " + e.message, "error"); }
-}
-function monTimer() {
-  if (monTimerId) { clearInterval(monTimerId); monTimerId = null; }
-  if ($("mon-auto").checked) { monTimerId = setInterval(loadMon, 2000); loadMon(); }
-}
-async function stopMon() { try { await api("/api/monitor/stop", { method: "POST" }); loadMon(); } catch (e) { toast(e.message, "error"); } }
+    const a = await api("/api/autosense");
+    const d = await api("/api/autosense", { method: "POST", body: JSON.stringify({ paused: !a.paused }) });
+    $("pause-auto-btn").textContent = d.paused ? "resume auto" : "pause auto";
+    $("auto-badge").textContent = d.paused ? "auto paused" : "auto on";
+    $("auto-badge").className = "badge badge-sm mono " + (d.paused ? "badge-warning" : "badge-ghost");
+    $("auto-note").textContent = d.paused ? "auto is paused — manual mode is stable; resume when you are done" : "";
+  } catch (e) { toast(e.message, true); }
+};
 
-/* ---------- advanced ---------- */
-let procList = {};
-async function loadAdv() {
+// net form
+$("net-form").onsubmit = async (ev) => {
+  ev.preventDefault();
+  const body = {
+    ssid: $("f-ssid").value, channel: $("f-chan").value,
+    country_code: $("f-country").value, max_num_sta: +$("f-maxsta").value,
+    confirm: "RESTART",
+  };
+  if ($("f-pass").value) body.passphrase = $("f-pass").value;
   try {
-    procList = await api("/api/proc");
-    const box = $("adv-list");
-    box.innerHTML = Object.entries(procList).map(([n, w]) =>
-      `<button class="btn btn-sm ${w ? "btn-outline" : "btn-ghost"} text-start mono justify-start" onclick="advOpen('${n}')">${n}${w ? "" : " <span class='opacity-40'>r/o</span>"}</button>`
-    ).join("");
-    $("adv-count").textContent = Object.keys(procList).length + " entries";
-    $("adv-root").textContent = document.querySelector("#d-fw")?.textContent?.trim() || "";
-  } catch (e) { toast("advanced: " + e.message, "error"); }
-}
-function advFilter() {
-  const q = $("adv-q").value.toLowerCase();
-  let n = 0;
-  for (const b of $("adv-list").children) {
-    const show = !q || b.textContent.toLowerCase().includes(q);
-    b.style.display = show ? "" : "none";
-    if (show) n++;
-  }
-  $("adv-count").textContent = n + " entries";
-}
-async function advOpen(name) {
-  try {
-    const text = await api("/api/proc/read?name=" + encodeURIComponent(name));
-    const w = procList[name];
-    const modal = document.createElement("div");
-    modal.className = "modal modal-open";
-    modal.innerHTML = `<div class="modal-box max-w-2xl">
-      <h3 class="font-bold mono mb-2">${name} ${w ? "(writable)" : "(read-only)"}</h3>
-      <pre class="mono bg-base-200 p-2 rounded-box max-h-64 overflow-auto">${text.replace(/</g,"&lt;") || "(empty)"}</pre>
-      ${w ? `<label class="form-control mt-3"><span class="label-text mb-1">set value</span>
-        <input class="input input-bordered mono" id="adv-val" value="${text.trim().replace(/"/g, "&quot;")}">
-        <button class="btn btn-wide btn-warning mt-2" id="adv-write">write (live effect)</button></label>` : ""}
-      <div class="modal-action"><button class="btn" onclick="this.closest('.modal').remove()">close</button></div>
-    </div>`;
-    document.body.appendChild(modal);
-    modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
-    const wb = modal.querySelector("#adv-write");
-    if (wb) wb.onclick = async () => {
-      const val = modal.querySelector("#adv-val").value;
-      const confirmStr = name === "write_reg" || name === "read_reg" ? prompt("type DANGER to confirm this raw register " + (name === "write_reg" ? "write" : "access") + ":") : confirm(`Write "${val}" to ${name}? This takes effect immediately on the radio.`) ? "ok" : null;
-      if (!confirmStr) return;
-      if (name === "write_reg" || name === "read_reg") { if (confirmStr !== "DANGER") return toast("aborted", "warning"); }
-      try {
-        await api("/api/proc/write", { method: "POST", headers: {"Content-Type":"application/json"},
-          body: JSON.stringify({ name, value: val, confirm: name === "write_reg" || name === "read_reg" ? "DANGER" : "ok" }) });
-        toast(`${name} ← ${val}`, "success");
-        modal.remove(); loadAdv();
-      } catch (e) { toast(e.message, "error"); }
-    };
-  } catch (e) { toast(e.message, "error"); }
-}
-async function regRead() {
-  const a = $("reg-addr").value.trim(), l = $("reg-len").value;
-  if (!/^0[xX][0-9a-fA-F]+$/.test(a)) return toast("address like 0x424", "warning");
-  try {
-    const t = await api(`/api/proc/read?name=read_reg&reg=${encodeURIComponent(a)}&len_=${l}`);
-    $("reg-out").textContent = t.trim();
-  } catch (e) { toast(e.message, "error"); }
-}
-async function regWrite() {
-  const a = $("reg-waddr").value.trim(), v = $("reg-wval").value.trim(), l = $("reg-wlen").value;
-  if (!/^0[xX][0-9a-fA-F]+$/.test(a) || !/^0[xX][0-9a-fA-F]+$/.test(v)) return toast("hex values like 0x424 / 0x1234", "warning");
-  const c = prompt(`RAW REGISTER WRITE\n${a} ← ${v} (${l}-byte)\n\nA wrong value can take the radio down. Type DANGER to proceed:`);
-  if (c !== "DANGER") return toast("aborted", "warning");
-  try {
-    await api("/api/proc/write", { method: "POST", headers: {"Content-Type":"application/json"},
-      body: JSON.stringify({ name: "write_reg", value: `${a} ${v} ${l}`, confirm: "DANGER" }) });
-    toast("written — reading back…", "success");
-    setTimeout(() => { $("reg-addr").value = a; $("reg-len").value = l; regRead(); }, 400);
-  } catch (e) { toast(e.message, "error"); }
-}
+    await api("/api/net", { method: "POST", body: JSON.stringify(body) });
+    $("f-pass").value = "";
+    toast("network settings saved — AP restarted");
+  } catch (e) { toast(e.message, true); }
+  setTimeout(render, 2500);
+};
 
-tab("dash");
+// registers
+function regHex(v) { return /^0x/i.test(v) ? v.toLowerCase() : "0x" + v; }
+$("reg-read").onclick = async () => {
+  try {
+    const d = await api(`/api/proc/read?name=read_reg&reg=${regHex($("reg-offset").value)}&len_=${$("reg-size").value}`);
+    $("reg-result").textContent = "= " + JSON.stringify(d);
+  } catch (e) { $("reg-result").textContent = e.message; }
+};
+$("reg-write").onclick = async () => {
+  try {
+    const d = await api("/api/proc/write", { method: "POST", body: JSON.stringify({
+      name: "write_reg",
+      value: `${regHex($("reg-offset").value)} ${regHex($("reg-value").value)} ${$("reg-size").value}`,
+      confirm: "DANGER" })});
+    $("reg-result").textContent = "wrote " + d.value;
+  } catch (e) { $("reg-result").textContent = e.message; }
+};
+
+$("adv-filter").oninput = renderAdvanced;
+
+// channel options: 2.4 GHz only
+$("f-chan").innerHTML = Array.from({ length: 14 }, (_, i) => `<option>${i + 1}</option>`).join("");
+
+render();
+renderAdvanced();
+setInterval(render, 5000);
 </script>
 </body>
 </html>

@@ -7,6 +7,7 @@ Nothing here is adapter-config specific: install on any Linux box with the
 dongle and the right tabs appear.
 """
 import hmac
+import json
 import os
 import re
 import shutil
@@ -43,6 +44,7 @@ except ImportError:
 # ---------------------------------------------------------------- config
 
 PORTAL_HOME = Path(__file__).resolve().parent
+PAUSE_FILE = PORTAL_HOME / "autosense.pause"
 PORT = int(os.environ.get("PORTAL_PORT", "8080"))
 USER = os.environ.get("PORTAL_USER", "admin")
 PASS = os.environ.get("PORTAL_PASS", "")
@@ -452,40 +454,51 @@ async def mode_set(req: Request):
         raise HTTPException(400, "mode must be ap|station|monitor")
     if body.get("confirm") != "SWITCH":
         raise HTTPException(400, "confirm='SWITCH' required")
-    iwtype = {"ap": "ap", "station": "managed", "monitor": "monitor"}[mode]
     iw_bin = which("iw") or "/usr/sbin/iw"
     log = []
     hostapd_was = service_state("hostapd")
-    if mode != "ap" and hostapd_was == "active":
-        run("systemctl", "stop", "hostapd")
-        log.append("stopped hostapd")
-    if mode != "station":
-        run("pkill", "-x", "wpa_supplicant")
-        log.append("stopped wpa_supplicant (if running)")
-    run("ip", "link", "set", IFACE, "down")
-    rc, out, err = run(iw_bin, "dev", IFACE, "set", "type", iwtype)
-    if rc != 0:
-        # undo: back to AP type + service, never leave production dead
-        run(iw_bin, "dev", IFACE, "set", "type", "ap")
+    if mode == "ap":
+        # iw refuses set-type ap on this driver ("run a management daemon");
+        # hostapd performs the nl80211 iftype change itself
         run("ip", "link", "set", IFACE, "up")
-        if hostapd_was == "active":
-            run("systemctl", "start", "hostapd")
-            log.append("restored hostapd")
-        detail = f"switch failed: {err.strip() or out.strip()}"
-        if hostapd_was == "active":
-            detail += " — AP restored"
-        raise HTTPException(500, detail)
-    run("ip", "link", "set", IFACE, "up")
-    log.append(f"{IFACE} -> {iwtype}")
-    if mode == "ap" and which("hostapd"):
         run("systemctl", "start", "hostapd")
-        log.append("started hostapd")
-    if mode == "station":
-        conf = Path(f"/etc/wpa_supplicant/wpa-{IFACE}.conf")
-        if conf.is_file() and which("wpa_supplicant"):
-            run("wpa_supplicant", "-i", IFACE, "-c", str(conf), "-B")
-            log.append("started wpa_supplicant")
+        time.sleep(2)
+        if service_state("hostapd") != "active":
+            raise HTTPException(500, "hostapd did not come up — AP not running")
+        run("systemctl", "start", "dnsmasq")
+        log.append("AP brought up through hostapd")
+    else:
+        iwtype = {"station": "managed", "monitor": "monitor"}[mode]
+        if hostapd_was == "active":
+            run("systemctl", "stop", "hostapd")
+            log.append("stopped hostapd")
+        if mode != "station":
+            run("pkill", "-x", "wpa_supplicant")
+            log.append("stopped wpa_supplicant (if running)")
+        run("ip", "link", "set", IFACE, "down")
+        rc, out, err = run(iw_bin, "dev", IFACE, "set", "type", iwtype)
+        if rc != 0:
+            # undo: never leave production dead (iw can't set type ap on
+            # this driver — hostapd start does the iftype change)
+            run("ip", "link", "set", IFACE, "up")
+            if hostapd_was == "active":
+                run("systemctl", "start", "hostapd")
+                log.append("restored hostapd")
+            detail = f"switch failed: {err.strip() or out.strip()}"
+            if hostapd_was == "active":
+                detail += " — AP restored"
+            raise HTTPException(500, detail)
+        run("ip", "link", "set", IFACE, "up")
+        log.append(f"{IFACE} -> {iwtype}")
+        if mode == "station":
+            conf = Path(f"/etc/wpa_supplicant/wpa-{IFACE}.conf")
+            if conf.is_file() and which("wpa_supplicant"):
+                run("wpa_supplicant", "-i", IFACE, "-c", str(conf), "-B")
+                log.append("started wpa_supplicant")
     time.sleep(1.5)
+    # a manual switch pauses autosense so the daemon doesn't fight it
+    PAUSE_FILE.write_text(f"paused by portal at {datetime.now().isoformat()}")
+    log.append("auto mode paused while manual")
     return {"mode": current_mode(), "log": log}
 
 
@@ -536,6 +549,25 @@ async def net_set(req: Request):
     if st != "active":
         raise HTTPException(500, f"hostapd did not come back ({st}) — check journalctl -u hostapd")
     return {"applied": True, "hostapd": st, "conf": str(conf)}
+
+
+@app.get("/api/autosense", dependencies=[Depends(auth)])
+def autosense_get():
+    return {"running": service_state("autosense") == "active",
+            "paused": PAUSE_FILE.exists()}
+
+
+@app.post("/api/autosense", dependencies=[Depends(auth)])
+async def autosense_set(req: Request):
+    try:
+        body = json.loads((await req.body()) or b"{}")
+    except ValueError:
+        raise HTTPException(400, "bad json")
+    if body.get("paused"):
+        PAUSE_FILE.write_text(f"paused by portal at {datetime.now().isoformat()}")
+    else:
+        PAUSE_FILE.unlink(missing_ok=True)
+    return autosense_get()
 
 
 @app.get("/api/scan", dependencies=[Depends(auth)])
