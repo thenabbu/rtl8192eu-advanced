@@ -203,13 +203,19 @@ class Led(threading.Thread):
                 self._w(False); self._stop.wait(0.5)
                 continue
             if mode == "monitor":
-                # breathing: 0->1->0 sine over ~3s, PWM at ~16Hz
-                t = 0.0
+                # breathing: 0->1->0 sine over 3s, rendered as 100 Hz PWM
+                # (deterministic 1 ms phase; the eye fuses >= ~80 Hz into
+                # a smooth brightness ramp). Write only on state change.
+                t0 = time.time()
+                last = None
                 while not self._stop.is_set() and self.STATE["mode"] == "monitor":
+                    t = time.time() - t0
                     level = (1 - math.cos(2 * math.pi * (t % 3.0) / 3.0)) / 2
-                    self._w((t % 0.06) < 0.06 * level)
-                    t += 0.06
-                    self._stop.wait(0.06)
+                    on = (int(t * 1000) % 10) < level * 10
+                    if on != last:
+                        self._w(on)
+                        last = on
+                    self._stop.wait(0.001)
                 continue
             self._stop.wait(1)
 
