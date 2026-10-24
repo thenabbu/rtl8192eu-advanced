@@ -161,6 +161,7 @@ class Led(threading.Thread):
     STATE = {"mode": None}
     _stop = threading.Event()
     _base = None      # cached 0x4C dword; only we write it, so cache is safe
+    _wfd = None       # pre-opened write_reg fd (per-toggle open/close is slow)
 
     def _read32(self, addr):
         (PROC / "read_reg").write_text(f"{addr:x} 4\n")
@@ -181,14 +182,31 @@ class Led(threading.Thread):
             self._base = None
 
     def _w(self, on):
-        """One 32-bit write_reg per toggle: bit 11 of 0x4C."""
+        """One 32-bit write_reg per toggle: bit 11 of 0x4C.
+
+        Uses a pre-opened fd when available: open/close per toggle cost
+        2-10 ms of USB round-trips and that latency is what made the
+        breathing PWM jitter into visible flicker.
+        """
         if DRY or self._base is None:
             return
+        v = (self._base & ~LED_GATE) | (0 if on else LED_BIT)
+        if self._wfd is None:
+            try:
+                self._wfd = os.open(str(PROC / "write_reg"), os.O_WRONLY)
+            except OSError as e:
+                log("led write_reg open failed:", e)
+                return
         try:
-            v = (self._base & ~LED_GATE) | (0 if on else LED_BIT)
-            (PROC / "write_reg").write_text(f"4c {v:x} 4\n")
-        except OSError as e:
-            log("led write failed:", e)
+            os.write(self._wfd, f"4c {v:x} 4\n".encode())
+        except OSError:
+            # fd gone (driver reloaded) — drop it, next call reopens.
+            try:
+                os.close(self._wfd)
+            except OSError:
+                pass
+            self._wfd = None
+            log("led write failed, fd reset")
 
     def run(self):
         self._arm()
@@ -203,15 +221,15 @@ class Led(threading.Thread):
                 self._w(False); self._stop.wait(0.5)
                 continue
             if mode == "monitor":
-                # breathing: 0->1->0 sine over 3s, rendered as 100 Hz PWM
-                # (deterministic 1 ms phase; the eye fuses >= ~80 Hz into
-                # a smooth brightness ramp). Write only on state change.
+                # breathing: 0->1->0 sine over 3s, rendered as 200 Hz PWM
+                # (deterministic 1 ms phase; >= ~150 Hz fuses into a smooth
+                # brightness ramp — 100 Hz reads as flicker on this LED).
                 t0 = time.time()
                 last = None
                 while not self._stop.is_set() and self.STATE["mode"] == "monitor":
                     t = time.time() - t0
                     level = (1 - math.cos(2 * math.pi * (t % 3.0) / 3.0)) / 2
-                    on = (int(t * 1000) % 10) < level * 10
+                    on = (int(t * 1000) % 5) < level * 5
                     if on != last:
                         self._w(on)
                         last = on
@@ -222,6 +240,12 @@ class Led(threading.Thread):
     def stop(self):
         self._stop.set()
         self._w(False)
+        if self._wfd is not None:
+            try:
+                os.close(self._wfd)
+            except OSError:
+                pass
+            self._wfd = None
 
 
 # ---------------------------------------------------------------- probes
