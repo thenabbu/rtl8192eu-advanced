@@ -4952,6 +4952,7 @@ const struct rtw_proc_hdl adapter_proc_hdls[] = {
 #endif
 	RTW_PROC_HDL_SSEQ("write_reg", NULL, proc_set_write_reg),
 	RTW_PROC_HDL_SSEQ("read_reg", proc_get_read_reg, proc_set_read_reg),
+	RTW_PROC_HDL_SSEQ("led_breath", proc_get_led_breath, proc_set_led_breath),
 	RTW_PROC_HDL_SSEQ("tx_rate_bmp", proc_get_dump_tx_rate_bmp, NULL),
 	RTW_PROC_HDL_SSEQ("adapters_status", proc_get_dump_adapters_status, NULL),
 #ifdef CONFIG_RTW_CUSTOMER_STR

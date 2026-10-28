@@ -1447,6 +1447,7 @@ static void __exit rtw_drv_halt(void)
 
 	platform_wifi_power_off();
 
+	led_breath_exit();
 	rtw_suspend_lock_uninit();
 	rtw_drv_proc_deinit();
 	rtw_nlrtw_deinit();
