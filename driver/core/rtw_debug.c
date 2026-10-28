@@ -7664,3 +7664,241 @@ inline void RTW_BUF_DUMP_SEL(uint _loglevel, void *sel, u8 *_titlestring,
 }
 
 #endif
+
+/* -------------------------------------------------------------------------
+ * LED breathing — kernel-side PWM (v5, edge-paced)
+ *
+ * PHY 0x4C bit11 is a 1-bit LED (0 = on). The vendor HAL has no hardware
+ * blink/PWM, so every edge costs one USB control round-trip (~0.2-3 ms).
+ *
+ * Lessons from v3/v4 (all measured on the lab, 2026-10-24):
+ *   v3: kthread_stop on the proc path = use-after-free + permanent hang.
+ *   v4: a kthread writing every 500 us occupies the USB control endpoint
+ *       ~100% of the time and starves every other register access —
+ *       proc read_reg got no samples for minutes and led_breath_start's
+ *       one rtw_read32 wedged holding the mutex until reboot.
+ *   userspace (daemon) PWM: GIL/scheduler jitter + aliasing of the phase
+ *       against write latency = the flicker Navya saw at 100/200 Hz.
+ *
+ * v5: the kthread polls at 250 us and writes only on a state change —
+ *     at most 2 edges per 10 ms PWM period, ~20% endpoint occupancy,
+ *     so procfs I/O is always served. 100 Hz PWM, 5% duty steps, 3 s
+ *     cosine envelope, phase pure from ktime (drift-free).
+ *
+ *   echo 1 > /proc/net/rtl8192eu/<if>/led_breath   start (breathing)
+ *   echo 0 > /proc/net/rtl8192eu/<if>/led_breath   stop (LED off)
+ *
+ * start/stop only flip a flag — no register access on the proc path, so
+ * they can never block on USB. The kthread is persistent (created once,
+ * stopped only at module exit); it turns the LED off itself on stop.
+ * While running, userspace must not write 0x4C (the daemon switches over).
+ * ponytail: singleton — one dongle at a time; per-adapter state if that
+ * ever matters.
+ * -------------------------------------------------------------------------*/
+#include <linux/kthread.h>
+#include <linux/ktime.h>
+#include <linux/mutex.h>
+
+#define LED_BREATH_REG		0x4c
+#define LED_BREATH_BIT		0x00000800	/* bit 11, 0 = on */
+#define LED_PWM_TICKS		20		/* 10 ms PWM period in 250 us ticks */
+#define LED_ENV_TICKS		12000	/* 3 s envelope in 250 us ticks */
+#define LED_BREATH_Q		64	/* ticks per cosine quarter */
+
+/* cos(0..90 deg) in 64 steps, 0..255 (generated: round(255*cos(pi*k/128))) */
+static const u8 led_breath_q[65] = {
+	255, 255, 255, 254, 254, 253, 252, 251, 250, 249, 247, 246, 244, 242,
+	240, 238, 236, 233, 231, 228, 225, 222, 219, 215, 212, 208, 205, 201,
+	197, 193, 189, 185, 180, 176, 171, 167, 162, 157, 152, 147, 142, 136,
+	131, 126, 120, 115, 109, 103, 98, 92, 86, 80, 74, 68, 62, 56, 50, 44,
+	37, 31, 25, 19, 13, 6, 0
+};
+
+/* duty in 250 us ticks (0..20) at envelope tick t: (1 - cos) / 2 * 20 */
+static u32 led_breath_duty(u32 t)
+{
+	u32 i = (t % LED_ENV_TICKS) * (LED_BREATH_Q * 4) / LED_ENV_TICKS;
+	s32 c;
+
+	if (i < LED_BREATH_Q)
+		c = led_breath_q[i];
+	else if (i < LED_BREATH_Q * 2)
+		c = -led_breath_q[LED_BREATH_Q * 2 - i - 1];
+	else if (i < LED_BREATH_Q * 3)
+		c = -led_breath_q[i - LED_BREATH_Q * 2];
+	else
+		c = led_breath_q[LED_BREATH_Q * 4 - i - 1];
+	return (255 - c) * LED_PWM_TICKS / (2 * 255);
+}
+
+struct led_breath {
+	struct task_struct	*thread;	/* persistent; exits only at module rmmod */
+	struct mutex		lock;
+	_adapter		*padapter;
+	u32			base;	/* 0x4C as found, bit 11 cleared (lazy) */
+	bool		armed;	/* base captured on the first tick */
+	bool		on;		/* last LED state the kernel wrote */
+	bool		running;
+	bool		lock_init;
+};
+
+static struct led_breath lb = { .lock_init = false };
+
+static int led_breath_task(void *data)
+{
+	u64 t0 = ktime_get();	/* ns anchor; phase = pure function of ktime */
+	int bad = 0;
+
+	while (!kthread_should_stop()) {
+		mutex_lock(&lb.lock);
+		if (!lb.running || !lb.padapter) {
+			if (lb.armed && lb.on) {
+				/* stop path: we own the LED, we turn it off */
+				lb.on = false;
+				if (rtw_write32(lb.padapter, LED_BREATH_REG, lb.base))
+					lb.armed = false;
+			}
+			mutex_unlock(&lb.lock);
+			usleep_range(20000, 40000);
+			continue;
+		}
+		if (!lb.armed) {
+			u32 r = rtw_read32(lb.padapter, LED_BREATH_REG);
+
+			lb.base = r & ~LED_BREATH_BIT;
+			lb.on = !(r & LED_BREATH_BIT);
+			lb.armed = true;
+		} else {
+			u32 t = (u32)((ktime_get() - t0) / 250000); /* 250 us ticks */
+			bool on = (t % LED_PWM_TICKS) < led_breath_duty(t);
+
+			if (on != lb.on) {
+				lb.on = on;
+				/* rtw_write32 returns _SUCCESS(1) on success,
+				 * _FAIL(0) on failure — Realtek convention,
+				 * opposite of the Unix errno style */
+				if (rtw_write32(lb.padapter, LED_BREATH_REG,
+						lb.base | (on ? 0 : LED_BREATH_BIT)) == _FAIL) {
+					if (++bad >= 5) {
+						/* device gone/broken; daemon falls back
+						 * to userspace PWM */
+						printk(KERN_INFO "rtl8192eu: led breath: "
+						       "write failed, off\n");
+						lb.running = false;
+						lb.padapter = NULL;
+						lb.armed = false;
+					}
+				} else {
+				bad = 0;
+				}
+			}
+		}
+		mutex_unlock(&lb.lock);
+		usleep_range(150, 300);
+	}
+	return 0;
+}
+
+/* create the persistent kthread once; never stopped except at module exit */
+static void led_breath_thread(void)
+{
+	if (lb.thread)
+		return;
+	mutex_lock(&lb.lock);
+	if (!lb.thread) {
+		struct task_struct *task =
+			kthread_run(led_breath_task, &lb, "rtl8192eu-led");
+
+		if (IS_ERR(task))
+			RTW_ERR("led breath: kthread_run failed %ld\n",
+					PTR_ERR(task));
+		else
+			lb.thread = task;
+	}
+	mutex_unlock(&lb.lock);
+}
+
+/* proc path: flag set only. No USB here — this can never block. */
+int led_breath_start(struct net_device *dev)
+{
+	_adapter *padapter = (_adapter *)rtw_netdev_priv(dev);
+
+	if (!lb.lock_init) {
+		mutex_init(&lb.lock);
+		lb.lock_init = true;
+	}
+	led_breath_thread();
+	mutex_lock(&lb.lock);
+	lb.padapter = padapter;
+	lb.armed = false;	/* recapture 0x4C on the first tick */
+	lb.running = true;
+	mutex_unlock(&lb.lock);
+	/* RTW_* is a no-op in this build; printk so state changes are visible */
+	printk(KERN_INFO "rtl8192eu: led breath: started on %s\n", dev->name);
+	return 0;
+}
+EXPORT_SYMBOL(led_breath_start);
+
+/* proc path: flag clear only; the kthread turns the LED off (<= 0.3 ms).
+ * No kthread_stop here — see header note. */
+void led_breath_stop(void)
+{
+	if (!lb.lock_init)
+		return;
+	mutex_lock(&lb.lock);
+	lb.running = false;
+	mutex_unlock(&lb.lock);
+}
+EXPORT_SYMBOL(led_breath_stop);
+
+/* module exit: the only place the kthread is stopped (it is alive — a dead
+ * one would already be a kernel oops). */
+void led_breath_exit(void)
+{
+	if (!lb.lock_init)
+		return;
+	mutex_lock(&lb.lock);
+	lb.running = false;
+	mutex_unlock(&lb.lock);
+	if (lb.thread) {
+		kthread_stop(lb.thread);	/* waits out at most one tick */
+		lb.thread = NULL;
+	}
+	mutex_lock(&lb.lock);
+	if (lb.armed && lb.padapter && lb.on) {
+		lb.on = false;
+		rtw_write32(lb.padapter, LED_BREATH_REG, lb.base);
+	}
+	mutex_unlock(&lb.lock);
+}
+EXPORT_SYMBOL(led_breath_exit);
+
+
+ssize_t proc_set_led_breath(struct file *file, const char __user *buffer,
+			    size_t count, loff_t *pos, void *data)
+{
+	char tmp[8];
+	long on;
+	int ret = (int)count;
+
+	if (count < 1 || count > sizeof(tmp) ||
+	    copy_from_user(tmp, buffer, count))
+		return -EFAULT;
+	tmp[count] = 0;
+	on = simple_strtol(tmp, NULL, 10);
+	if (on) {
+		ret = led_breath_start((struct net_device *)data);
+		if (ret < 0)
+			return ret;
+	} else
+		led_breath_stop();
+	/* must return count, not 0: a zero return makes userspace writers
+	   (dash writestr et al.) retry the write forever */
+	return count;
+}
+
+int proc_get_led_breath(struct seq_file *m, void *v)
+{
+	seq_printf(m, "led_breath: %s\n", lb.running ? "running" : "off");
+	return 0;
+}
