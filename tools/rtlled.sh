@@ -41,5 +41,10 @@ case $cmd in
     done
     echo "blinked $n x, left OFF (0x4c = 0x$(r32 4c))"
     ;;
-  *) echo "usage: rtlled.sh {status|on|off|blink [n]}"; exit 1 ;;
+  breath)
+    [ -w "$P/led_breath" ] || { echo "kernel led_breath not available in this build"; exit 1; }
+    echo "${2:-1}" > "$P/led_breath"
+    cat "$P/led_breath"
+    ;;
+  *) echo "usage: rtlled.sh {status|on|off|blink [n]|breath [1|0]}"; exit 1 ;;
 esac

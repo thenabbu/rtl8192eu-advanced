@@ -7701,7 +7701,9 @@ inline void RTW_BUF_DUMP_SEL(uint _loglevel, void *sel, u8 *_titlestring,
 
 #define LED_BREATH_REG		0x4c
 #define LED_BREATH_BIT		0x00000800	/* bit 11, 0 = on */
-#define LED_PWM_TICKS		20		/* 10 ms PWM period in 250 us ticks */
+#define LED_ARM_REG		0x64		/* bit 1 gates SW LED control */
+#define LED_GATE_BITS		0x00008700	/* 0x4C bits 15/10/9/8, cleared to arm */
+#define LED_PWM_TICKS		20		/* 5 ms PWM period (200 Hz) in 250 us ticks */
 #define LED_ENV_TICKS		12000	/* 3 s envelope in 250 us ticks */
 #define LED_BREATH_Q		64	/* ticks per cosine quarter */
 
@@ -7763,7 +7765,15 @@ static int led_breath_task(void *data)
 			continue;
 		}
 		if (!lb.armed) {
-			u32 r = rtw_read32(lb.padapter, LED_BREATH_REG);
+			/* Arm SW LED control (SwLedOn/Off_8192EU semantics):
+			 * without these the LED never lights. Idempotent. */
+			u32 g = rtw_read32(lb.padapter, LED_ARM_REG);
+			u32 r;
+
+			rtw_write32(lb.padapter, LED_ARM_REG, g & ~0x2);
+			r = rtw_read32(lb.padapter, LED_BREATH_REG);
+			rtw_write32(lb.padapter, LED_BREATH_REG, r & ~LED_GATE_BITS);
+			r &= ~LED_GATE_BITS;
 
 			lb.base = r & ~LED_BREATH_BIT;
 			lb.on = !(r & LED_BREATH_BIT);

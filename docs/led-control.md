@@ -34,9 +34,18 @@ echo "4c 6620082 4" > $W/write_reg                  # 32-bit write
 ```
 
 `tools/rtlled.sh` wraps the proven sequence: `status` / `on` / `off` /
-`blink n`. `portal/autosense.py` uses the same writes for its mode
-indication: **breathing = monitor, 1 Hz blink = AP, solid = station**
-(NGJIO failover).
+`blink n` / `breath [1|0]`. `portal/autosense.py` uses the same writes
+for its mode indication: **breathing = monitor, 1 Hz blink = AP,
+solid = station** (NGJIO failover).
+
+## Kernel breathing (current driver)
+
+`echo 1 > $W/led_breath` starts a kernel kthread that drives bit 11 at
+200 Hz with a 3 s cosine envelope (the proven breathing look, without
+userspace PWM jitter); `echo 0` stops it. While running it is the sole
+writer of 0x4C — it arms the gate bits itself (see `rtlled.sh breath`).
+`autosense.py` delegates monitor mode to it and falls back to
+userspace PWM on older drivers.
 
 ## Evidence chain (2026-10-24)
 
