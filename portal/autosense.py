@@ -58,20 +58,30 @@ def run(*args, timeout=20):
 
 
 def telegram(msg):
-    """Edge-triggered alerts only (state changes), best-effort."""
+    """Edge-triggered alerts only (state changes), best-effort with retry.
+
+    Retry matters: at failover the alert rides the NEW link (NGJIO), whose
+    DNS can lag ~10-20 s after DHCP — first attempt often loses the race.
+    """
     if not (TG_TOKEN and TG_CHAT):
         log("no TG config, would alert:", msg)
         return
     import json
+    import time
     import urllib.request
     body = json.dumps({"chat_id": TG_CHAT, "text": msg}).encode()
-    try:
-        urllib.request.urlopen(urllib.request.Request(
-            f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage",
-            data=body, headers={"Content-Type": "application/json"}), timeout=10)
-        log("alerted:", msg)
-    except OSError as e:
-        log("alert failed:", e)
+    url = f"https://api.telegram.org/bot{TG_TOKEN}/sendMessage"
+    for attempt in range(1, 5):
+        try:
+            urllib.request.urlopen(urllib.request.Request(
+                url, data=body, headers={"Content-Type": "application/json"}), timeout=10)
+            log("alerted:", msg)
+            return
+        except OSError as e:
+            log("alert failed (attempt %d):" % attempt, e)
+            if attempt < 4:
+                time.sleep(5)
+    log("alert dropped after 4 attempts:", msg)
 
 
 def own_mac():
