@@ -308,7 +308,10 @@ def failover_up():
         return False
     conf = Path("/etc/wpa_supplicant/wpa-failover.conf")
     conf.parent.mkdir(mode=0o755, exist_ok=True)
-    conf.write_text(f'network={{\n\tssid="{UP_SSID}"\n\tpsk="{UP_PASS}"\n}}\n')
+    # key_mgmt=WPA-PSK + quoted psk => wpa_supplicant treats UP_PASS as an
+    # ASCII passphrase (PBKDF2). Without key_mgmt (or with an unquoted psk)
+    # it expects a raw 64-hex PSK and the 4-way handshake fails WRONG_KEY.
+    conf.write_text(f'network={{\n\tssid="{UP_SSID}"\n\tkey_mgmt=WPA-PSK\n\tpsk="{UP_PASS}"\n}}\n')
     conf.chmod(0o600)
     switch_wifi("managed")
     run("wpa_supplicant", "-i", IFACE, "-c", str(conf), "-B")
