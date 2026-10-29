@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """autosense — self-managing mode daemon for the RTL8192EU AP dongle.
 
-Vision (user's): the adapter idles in MONITOR (LED breathing); a probe
-request for the AP SSID flips it to AP (LED blinking); ethernet loss flips
-it to STATION on the upstream Wi-Fi (LED solid) and fires a Telegram alert;
-ethernet recovery flips back to AP (LED blinking).
+Vision (user's, rev2 — always-on beacon): the SSID broadcasts ALL the
+time (hostapd up in both idle and active states, so devices always see
+BlockiNG). With no clients attached the adapter is idle (LED breathing);
+when a device connects it serves AP + internet normally (LED blinking).
+Ethernet loss flips it to STATION on the upstream Wi-Fi (LED solid) and
+fires a Telegram alert; ethernet recovery flips back to AP (LED blinking).
 
 One process, systemd-managed, owns the dongle LED. Talk to it by editing
 the env file — no CLI, no API. `--selftest` checks the pure logic.
@@ -108,16 +110,23 @@ def eth_ok():
 
 
 def switch_wifi(mode, channel=None):
-    """mode: ap|monitor|managed — safe sequence, restores AP on failure."""
+    """mode: ap|monitor|managed — safe sequence, restores AP on failure.
+
+    monitor = hostapd stays UP (SSID always broadcast; no probe-trigger
+    needed — clients find it on scan). hostapd changes iftype to AP, so
+    the scapy sniffer can't run; monitoring happens via hostapd's own
+    client accounting + dnsmasq leases. `channel` is accepted for call-site
+    compatibility but hostapd.conf owns it.
+    """
     hostapd_was = False
     if DRY:
         log("DRY-run: switch to", mode)
         return True
-    if mode != "ap":
+    if mode != "ap" and mode != "monitor":
         hostapd_was = run("systemctl", "is-active", "--quiet", "hostapd") == 0
         if hostapd_was:
             run("systemctl", "stop", "hostapd")
-    if mode == "ap":
+    if mode in ("ap", "monitor"):
         # iw refuses set-type ap on this driver ("run a management daemon") —
         # hostapd performs the nl80211 iftype change itself
         run("ip", "link", "set", IFACE, "up")
@@ -208,6 +217,16 @@ class Led(threading.Thread):
             self._wfd = None
             log("led write failed, fd reset")
 
+    def _kb(self, on):
+        """Kernel breathing switch (driver >= led_breath); False if absent."""
+        if DRY:
+            return False
+        try:
+            (PROC / "led_breath").write_text("1" if on else "0")
+            return bool(on) and "running" in (PROC / "led_breath").read_text()
+        except OSError:
+            return False
+
     def run(self):
         self._arm()
         while not self._stop.is_set():
@@ -221,7 +240,14 @@ class Led(threading.Thread):
                 self._w(False); self._stop.wait(0.5)
                 continue
             if mode == "monitor":
-                # breathing: 0->1->0 sine over 3s, rendered as 200 Hz PWM
+                if self._kb(True):
+                    # kernel kthread owns 0x4C (deterministic 200 Hz PWM,
+                    # no GIL, no per-edge USB latency) — don't touch the reg
+                    while not self._stop.is_set() and self.STATE["mode"] == "monitor":
+                        self._stop.wait(0.5)
+                    self._kb(False)
+                    continue
+                # fallback for drivers without led_breath: 200 Hz userspace PWM
                 # (deterministic 1 ms phase; >= ~150 Hz fuses into a smooth
                 # brightness ramp — 100 Hz reads as flicker on this LED).
                 t0 = time.time()
@@ -239,6 +265,7 @@ class Led(threading.Thread):
 
     def stop(self):
         self._stop.set()
+        self._kb(False)
         self._w(False)
         if self._wfd is not None:
             try:
@@ -391,17 +418,19 @@ def main():
             elif state == "ap" or state == "boot":
                 idle_since = idle_since or time.time()
                 if time.time() - idle_since >= IDLE_SECS or state == "boot":
-                    log("idle — going to monitor, listening for probes")
+                    # hostapd stays running: SSID always broadcast (user
+                    # spec); no probe-trigger. idle = 0 clients, but the
+                    # beacon keeps the network discoverable.
+                    log("idle — no clients, SSID broadcast, waiting for connect")
+                    stop_sniffer()
                     if switch_wifi("monitor", channel=ap_channel()):
                         state = "monitor"
-                        probe_watch.set()
-                        sniff_thread = threading.Thread(
-                            target=sniff_probes, args=(SSID, on_probe), daemon=True)
-                        sniff_thread.start()
                         Led.STATE["mode"] = "monitor"
                     idle_since = time.time()
             elif state == "monitor":
                 if hit_probe.is_set():
+                    # Legacy path (hostapd was stopped by a manual switch) —
+                    # harmless; switch_wifi("monitor") keeps hostapd up.
                     hit_probe.clear()
                     log("probe request for", SSID, "— bringing the AP up")
                     stop_sniffer()
@@ -430,7 +459,8 @@ wpa_psk=0x0
     assert me.client_count(sample) == 1, "own+dummy MACs must be excluded, cipher needed"
     me.own_mac = lambda: None
     assert me.client_count(sample) == 1
-    # decision matrix: eth x clients -> state
+    # decision matrix: eth x clients -> state (rev2: monitor no longer
+    # needs a probe — hostapd keeps the SSID beaconing even when idle)
     def decide(eth, clients, state, idle_elapsed):
         if state == "failover":
             return "ap" if eth else "failover"
@@ -447,6 +477,8 @@ wpa_psk=0x0
     assert decide(False, 1, "ap", 1) == "failover"
     assert decide(False, 0, "monitor", IDLE_SECS) == "failover"
     assert decide(True, 1, "failover", 0) == "ap"
+    # rev2: idle reaches monitor without needing a probe event
+    assert decide(True, 0, "monitor", IDLE_SECS) == "monitor"
     assert not me.own_mac() or True
     print("selftest OK")
 
